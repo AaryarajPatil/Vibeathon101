@@ -285,19 +285,53 @@
   }
 
   async function loadIncomingAid() {
-    // Show deliveries targeting this shelter
     const container = document.getElementById('incoming-list');
-    // We don't have a direct endpoint; fetch all and filter by shelter
-    // In a real app this would be a targeted query
     container.innerHTML = '<p class="text-muted text-sm">Fetching incoming deliveries…</p>';
-    // Use a workaround: the shelter can view its own batches via search
-    // For prototype we show a simulated view
-    container.innerHTML = `
-      <div class="card mb-3">
-        <div class="flex gap-2 mb-2">${aidTypeBadge('FOOD')} ${statusBadge('IN_TRANSIT')}</div>
-        <div class="text-sm text-secondary">Delivery in progress — rider en route. Check admin dashboard for live updates.</div>
-      </div>
-      <p class="text-muted text-sm mt-4">💡 For full delivery tracking, check with your coordinator.</p>`;
+    try {
+      const list = await api.get(`/shelters/${currentUser.id}/incoming`);
+      if (!list || !list.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🚚</div>
+            <h3>No incoming aid currently</h3>
+            <p>When donors donate food or supplies to your shelter, they will appear here in real-time.</p>
+          </div>`;
+        return;
+      }
+      container.innerHTML = list.map(item => {
+        const exp = fmtExpiry(item.expiry_at);
+        let statusTitle = 'Surplus Available — Waiting for Rider';
+        let statusColor = 'badge-yellow';
+        if (item.delivery_status === 'DELIVERED' || item.batch_status === 'DELIVERED') {
+          statusTitle = 'Delivered & Received'; statusColor = 'badge-green';
+        } else if (item.delivery_status === 'PICKED_UP' || item.delivery_status === 'IN_TRANSIT') {
+          statusTitle = `In Transit with Rider: ${item.rider_name || 'Volunteer'}`; statusColor = 'badge-blue';
+        } else if (item.batch_status === 'ASSIGNED' || item.delivery_status === 'PENDING') {
+          statusTitle = `Rider Assigned: ${item.rider_name || 'Volunteer'}`; statusColor = 'badge-purple';
+        }
+
+        return `
+          <div class="card mb-3" style="border-left: 4px solid var(--accent);">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                ${aidTypeBadge(item.aid_type)}
+                <span class="badge ${statusColor}">${statusTitle}</span>
+              </div>
+              <span class="badge ${exp.cls}">${exp.label}</span>
+            </div>
+            <div class="grid-2 text-sm mb-2">
+              <div><span class="text-muted">Quantity:</span> <strong>${item.quantity} kg/units</strong></div>
+              <div><span class="text-muted">Donor:</span> <strong>${item.donor_name || 'Anonymous'}</strong></div>
+              <div><span class="text-muted">Pickup Location:</span> ${item.pickup_address || '—'}</div>
+              <div><span class="text-muted">Rider:</span> ${item.rider_name ? `🏍️ ${item.rider_name}` : 'Awaiting assignment'}</div>
+            </div>
+            ${item.notes ? `<div class="text-xs text-secondary mt-1">📝 <strong>Notes:</strong> ${item.notes}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    } catch (ex) {
+      container.innerHTML = `<div class="form-error">Failed to load incoming aid: ${ex.message}</div>`;
+    }
   }
 
   async function toggleShelterStatus(active) {
@@ -306,7 +340,6 @@
       updateStatusBadge(active);
       toast(active ? 'success' : 'warning', active ? 'Shelter is now Open' : 'Shelter Closed', active ? '' : 'Admin notified about active deliveries.');
       if (!active) {
-        // Also emit via socket for real-time admin alert
         const sock = getSocket();
         if (sock) sock.emit('shelter:close');
       }
@@ -325,14 +358,24 @@
 
   // ── Socket Events ──────────────────────────────────────────────────
   function attachSocketEvents(sock) {
+    sock.on('shelter:incoming_aid', (data) => {
+      loadIncomingAid();
+      loadShelterData();
+      toast('info', '🍱 New Incoming Aid!', `A donor dispatched supplies to your shelter!`);
+    });
     sock.on('delivery:status_changed', ({ status }) => {
+      loadIncomingAid();
+      loadShelterData();
       if (status === 'DELIVERED') {
-        loadShelterData();
         toast('success', '🎉 Aid delivered!', 'Shelter requirements updated.');
       }
     });
+    sock.on('batch:available', () => {
+      loadIncomingAid();
+    });
     sock.on('delivery:rerouted', () => {
       toast('warning', 'A delivery was rerouted away from your shelter.');
+      loadIncomingAid();
     });
   }
 

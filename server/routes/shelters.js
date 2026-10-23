@@ -94,4 +94,30 @@ router.put('/:id/status', authenticate, (req, res) => {
   res.json({ id, is_active: !!is_active });
 });
 
+// GET /api/shelters/:id/incoming — list incoming batches and deliveries for shelter
+router.get('/:id/incoming', authenticate, (req, res) => {
+  const { id } = req.params;
+  if (req.user.role !== 'ADMIN' && req.user.id !== id)
+    return res.status(403).json({ error: 'Forbidden' });
+
+  const incoming = db.prepare(`
+    SELECT b.id as batch_id, b.quantity, b.status as batch_status, b.created_at,
+           d.id as donation_id, d.aid_type, d.expiry_at, d.notes, d.pickup_address,
+           u_don.name as donor_name,
+           del.id as delivery_id, del.status as delivery_status, del.picked_up_at, del.delivered_at,
+           u_rid.name as rider_name
+    FROM batches b
+    JOIN donations d ON b.donation_id = d.id
+    JOIN users u_don ON d.donor_id = u_don.id
+    LEFT JOIN deliveries del ON del.batch_id = b.id
+    LEFT JOIN riders r ON del.rider_id = r.id
+    LEFT JOIN users u_rid ON r.id = u_rid.id
+    WHERE b.shelter_id = ?
+    ORDER BY b.created_at DESC
+  `).all(id);
+
+  res.json(incoming);
+});
+
 module.exports = router;
+

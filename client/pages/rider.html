@@ -470,6 +470,15 @@
 
   // ── Socket Events ──────────────────────────────────────────────────
   function attachSocketEvents(sock) {
+    sock.on('batch:available', (batch) => {
+      loadAvailableBatches();
+      toast('info', '🏍️ New Batch Available!', `${batch?.quantity || ''} kg of ${batch?.aid_type || 'aid'} ready for pickup!`);
+    });
+
+    sock.on('batch:cancelled', () => {
+      loadAvailableBatches();
+    });
+
     sock.on('reservation:expired', ({ batchId }) => {
       toast('warning', 'Reservation expired', `Batch ${batchId.slice(0,8)} released back to pool.`);
       loadAvailableBatches();
@@ -493,7 +502,10 @@
       loadMyDeliveries();
     });
 
-    sock.on('delivery:status_changed', () => { loadMyDeliveries(); });
+    sock.on('delivery:status_changed', () => {
+      loadMyDeliveries();
+      loadAvailableBatches();
+    });
   }
 
   // ── Init ───────────────────────────────────────────────────────────

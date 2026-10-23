@@ -4,86 +4,80 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AidSync — Donor Portal</title>
-  <meta name="description" content="Donate food, medical supplies, and essential kits to shelters in need." />
+  <meta name="description" content="Donate food, medical supplies, and kits to shelters in need. Real-time coordination and last-mile tracking." />
   <link rel="stylesheet" href="/css/styles.css" />
-  <style>
-    .shelter-req-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; transition:border-color .15s; }
-    .shelter-req-card:hover { border-color: rgba(255,255,255,0.15); }
-    .req-bar { display:flex; gap:12px; margin-top:10px; flex-wrap:wrap; }
-    .req-pill { background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:999px; padding:4px 12px; font-size:0.75rem; display:flex; align-items:center; gap:6px; }
-    .payment-methods { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
-    .pay-method { border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 6px; text-align:center; cursor:pointer; transition:all .15s; background:none; }
-    .pay-method .pay-icon { font-size:1.4rem; display:block; margin-bottom:4px; }
-    .pay-method .pay-label { font-size:0.7rem; font-weight:600; color:var(--text-muted); }
-    .pay-method.selected { border-color:var(--accent); background:var(--accent-glow); }
-    .pay-method.selected .pay-label { color:var(--accent); }
-  </style>
 </head>
 <body>
+
+<!-- ── AUTH PAGE ─────────────────────────────────────────────────────────── -->
 <div id="auth-page" class="auth-page">
-  <div class="auth-container">
-    <div class="auth-logo">
-      <div style="font-size:2.5rem; margin-bottom:8px;">🤲</div>
-      <h1>AidSync</h1>
-      <p>Donor Portal</p>
+  <div class="auth-card">
+    <div class="auth-header">
+      <div style="font-size:2.4rem; margin-bottom:8px;">🤲</div>
+      <div class="auth-title">Donor Portal</div>
+      <div class="auth-subtitle">Donate perishables & supplies to verified shelters</div>
     </div>
-    <div class="auth-card">
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="showTab('login')">Sign In</button>
-        <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register</button>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="showTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-input" type="email" id="login-email" placeholder="priya@donor.in" required />
       </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="login-password" placeholder="••••••••" required />
+      </div>
+      <div id="login-error" class="form-error hidden"></div>
+      <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In</button>
+      <p class="text-muted text-xs text-center mt-3">Demo account: <code>priya@donor.in</code> / <code>donor123</code></p>
+    </form>
 
-      <!-- Login Form -->
-      <form id="login-form" onsubmit="doLogin(event)">
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input class="form-input" type="email" id="login-email" placeholder="donor@example.com" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input class="form-input" type="password" id="login-password" placeholder="••••••••" required />
-        </div>
-        <div id="login-error" class="form-error hidden"></div>
-        <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In</button>
-        <p style="text-align:center; margin-top:16px; font-size:0.8rem; color:var(--text-muted);">
-          <a href="/" style="color:var(--text-muted)">← Back to roles</a>
-        </p>
-      </form>
+    <!-- Register Form -->
+    <form id="register-form" class="hidden" onsubmit="doRegister(event)">
+      <div class="form-group">
+        <label class="form-label">Full Name / Organization</label>
+        <input class="form-input" type="text" id="reg-name" placeholder="Priya Sharma" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-input" type="email" id="reg-email" placeholder="priya@donor.in" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input class="form-input" type="tel" id="reg-phone" placeholder="+91-9876543210" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="reg-password" placeholder="At least 6 characters" required />
+      </div>
+      <div id="reg-error" class="form-error hidden"></div>
+      <button class="btn btn-primary btn-block btn-lg" type="submit" id="reg-btn">Create Donor Account</button>
+    </form>
 
-      <!-- Register Form -->
-      <form id="register-form" class="hidden" onsubmit="doRegister(event)">
-        <div class="form-group">
-          <label class="form-label">Full Name</label>
-          <input class="form-input" type="text" id="reg-name" placeholder="Priya Sharma" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input class="form-input" type="email" id="reg-email" placeholder="donor@example.com" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone</label>
-          <input class="form-input" type="tel" id="reg-phone" placeholder="+91 98765 43210" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input class="form-input" type="password" id="reg-password" placeholder="••••••••" required />
-        </div>
-        <div id="reg-error" class="form-error hidden"></div>
-        <button class="btn btn-success btn-block btn-lg" type="submit" id="reg-btn">Create Donor Account</button>
-      </form>
+    <div style="text-align:center; margin-top:20px;">
+      <a href="/" style="font-size:0.8rem; color:var(--text-muted);">← Switch Role</a>
     </div>
   </div>
 </div>
 
-<!-- MAIN APP -->
-<div id="app" class="app-shell hidden">
+<!-- ── MAIN APP ──────────────────────────────────────────────────────────── -->
+<div id="app" class="app-layout hidden">
+  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <h1>AidSync</h1>
-      <span class="role-badge" style="background:rgba(16,185,129,0.15); color:var(--donor-color);">Donor</span>
+      <span class="icon">🤲</span>
+      <div>
+        <div class="name">AidSync</div>
+        <div class="role-badge">Donor Portal</div>
+      </div>
     </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Menu</div>
+    <div class="nav-links">
       <button class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
         <span class="icon">📊</span> Dashboard
       </button>
@@ -95,6 +89,9 @@
       </button>
       <button class="nav-item" onclick="showSection('my-donations')" id="nav-my-donations">
         <span class="icon">📦</span> My Donations
+      </button>
+      <button class="nav-item" onclick="showSection('payments')" id="nav-payments">
+        <span class="icon">💳</span> Payments & Tips
       </button>
     </div>
     <div style="margin-top:auto; padding:0 12px;">
@@ -109,7 +106,7 @@
       <span class="topbar-title" id="section-title">Dashboard</span>
       <div class="topbar-actions">
         <span class="live-dot"></span>
-        <span style="font-size:0.8rem; color:var(--text-muted);">Live</span>
+        <span style="font-size:0.8rem; color:var(--text-muted);">Live Sync</span>
         <span id="user-name-display" style="font-size:0.85rem; font-weight:600;"></span>
       </div>
     </div>
@@ -123,7 +120,7 @@
           <div class="card-header">
             <div>
               <div class="card-title">Recent Donations</div>
-              <div class="card-subtitle">Your last 5 donations</div>
+              <div class="card-subtitle">Your latest donations & coordination status</div>
             </div>
             <button class="btn btn-primary btn-sm" onclick="showSection('donate')">+ Donate</button>
           </div>
@@ -134,29 +131,29 @@
       <!-- Shelter Needs -->
       <section id="sec-shelters" class="hidden">
         <div class="section-title">🏠 Current Shelter Requirements</div>
-        <p class="text-secondary text-sm mb-4">Browse active shelters and their current needs before donating.</p>
+        <p class="text-secondary text-sm mb-4">Browse active shelters and their current requirements before donating.</p>
         <div id="shelters-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;"></div>
       </section>
 
       <!-- New Donation -->
       <section id="sec-donate" class="hidden">
-        <div class="section-title">➕ New Donation</div>
-        <div class="card" style="max-width:600px;">
+        <div class="section-title">➕ New Aid Donation</div>
+        <div class="card" style="max-width:640px;">
           <form id="donate-form" onsubmit="submitDonation(event)">
             <div class="grid-2">
               <div class="form-group">
                 <label class="form-label">Aid Type</label>
                 <select class="form-select" id="d-aid-type" onchange="onAidTypeChange()" required>
                   <option value="">Select type...</option>
-                  <option value="FOOD">🍱 Perishable Food</option>
-                  <option value="MEDICAL">💊 Medical Supplies</option>
-                  <option value="KIT">🧰 Essential Kit</option>
+                  <option value="FOOD" selected>🍱 Perishable Cooked Food</option>
+                  <option value="MEDICAL">💊 Short-Life Medical Supplies</option>
+                  <option value="KIT">🧰 Essential Relief Kit</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Target Shelter</label>
-                <select class="form-select" id="d-shelter" onchange="onShelterChange()" required>
-                  <option value="">Select shelter...</option>
+                <select class="form-select" id="d-shelter" onchange="onShelterChange()">
+                  <option value="">🌟 Auto-Match Best Fit Shelter (Recommended)</option>
                 </select>
               </div>
             </div>
@@ -164,7 +161,7 @@
             <!-- Shelter requirement display -->
             <div id="shelter-requirement-box" class="hidden" style="margin-bottom:16px;">
               <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px;">
-                <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Shelter currently needs:</div>
+                <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Selected Shelter currently needs:</div>
                 <div id="shelter-req-display" style="font-size:1.4rem; font-weight:800; color:var(--text-primary);"></div>
                 <div class="warning-quote">
                   <span>⚠️</span>
@@ -177,7 +174,7 @@
               <div class="form-group">
                 <label class="form-label">Quantity</label>
                 <input class="form-input" type="number" id="d-quantity" placeholder="e.g. 10" min="0.1" step="0.1" required />
-                <div class="form-hint" id="d-qty-hint"></div>
+                <div class="form-hint" id="d-qty-hint">Large donations are automatically split into manageable rider batches.</div>
               </div>
               <div class="form-group">
                 <label class="form-label">Unit</label>
@@ -191,48 +188,61 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Shelf Life / Expiry (minutes from now)</label>
+              <label class="form-label">Shelf Life / Expiry Window (minutes from now)</label>
               <input class="form-input" type="number" id="d-expiry" value="120" min="15" required />
-              <div class="form-hint">Minimum 15 minutes. Food typically 60–180 min.</div>
+              <div class="form-hint">Time until perishable food spoils. Riders are prioritized to beat this deadline.</div>
             </div>
 
             <div class="form-group">
               <label class="form-label">Pickup Address</label>
-              <input class="form-input" type="text" id="d-address" placeholder="123 MG Road, Bengaluru" />
+              <input class="form-input" type="text" id="d-address" placeholder="Indiranagar 100ft Road, Bengaluru" required />
             </div>
             <div class="grid-2">
               <div class="form-group">
                 <label class="form-label">Pickup Latitude</label>
-                <input class="form-input" type="number" id="d-lat" value="12.9716" step="0.0001" />
+                <input class="form-input" type="number" id="d-lat" value="12.9784" step="0.0001" />
               </div>
               <div class="form-group">
                 <label class="form-label">Pickup Longitude</label>
-                <input class="form-input" type="number" id="d-lng" value="77.5946" step="0.0001" />
+                <input class="form-input" type="number" id="d-lng" value="77.6408" step="0.0001" />
               </div>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Notes / Special Instructions</label>
-              <textarea class="form-textarea" id="d-notes" placeholder="e.g. Vegetarian, no nuts, kept at room temp..."></textarea>
+              <label class="form-label">Dietary / Compatibility Notes</label>
+              <textarea class="form-textarea" id="d-notes" placeholder="e.g. Vegetarian, freshly prepared, packed in leak-proof containers..."></textarea>
             </div>
 
             <div id="donate-error" class="form-error hidden mb-3"></div>
-            <button class="btn btn-primary btn-block btn-lg" type="submit" id="donate-btn">🤲 Submit Donation</button>
+            <button class="btn btn-primary btn-block btn-lg" type="submit" id="donate-btn">🤲 Submit & Dispatch Batches</button>
           </form>
         </div>
       </section>
 
       <!-- My Donations -->
       <section id="sec-my-donations" class="hidden">
-        <div class="section-title">📦 My Donations</div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="section-title" style="margin:0;">📦 My Donations & Active Batches</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadMyDonations()">🔄 Refresh</button>
+        </div>
         <div id="my-donations-list"></div>
+      </section>
+
+      <!-- Payments & Tips -->
+      <section id="sec-payments" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="section-title" style="margin:0;">💳 Delivery Payments & Volunteer Rider Tips</div>
+            <p class="text-secondary text-sm">Cover volunteer rider fuel/logistics fees and reward timely delivery. Tips are split proportionally if breakdown recovery occurred.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadPayments()">🔄 Refresh</button>
+        </div>
+        <div id="payments-deliveries-list"></div>
       </section>
 
     </div>
   </div>
 </div>
-
-<!-- Payment Modal Template (injected dynamically) -->
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/api.js"></script>
@@ -304,22 +314,24 @@
   }
 
   // ── Navigation ─────────────────────────────────────────────────────
-  const sections = ['dashboard','shelters','donate','my-donations'];
+  const sections = ['dashboard','shelters','donate','my-donations','payments'];
   function showSection(name) {
     sections.forEach(s => {
       document.getElementById(`sec-${s}`).classList.toggle('hidden', s !== name);
       document.getElementById(`nav-${s}`)?.classList.toggle('active', s === name);
     });
     document.getElementById('section-title').textContent = {
-      dashboard: 'Dashboard', shelters: 'Shelter Needs', donate: 'New Donation', 'my-donations': 'My Donations'
+      dashboard: 'Dashboard', shelters: 'Shelter Needs', donate: 'New Aid Donation', 'my-donations': 'My Donations', payments: 'Payments & Tips'
     }[name];
     if (name === 'my-donations') loadMyDonations();
     if (name === 'shelters') renderShelters();
+    if (name === 'payments') loadPayments();
   }
 
   // ── Dashboard ──────────────────────────────────────────────────────
   async function loadDashboard() {
     const donations = await api.get('/donations').catch(() => []);
+    const deliveries = await api.get('/deliveries').catch(() => []);
     const total = donations.length;
     const delivered = donations.filter(d => d.status === 'DELIVERED').length;
     const active = donations.filter(d => ['PENDING','MATCHED','IN_TRANSIT'].includes(d.status)).length;
@@ -327,8 +339,8 @@
     document.getElementById('donor-stats').innerHTML = `
       <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total Donations</div></div>
       <div class="stat-card" style="--accent:var(--green)"><div class="stat-value">${delivered}</div><div class="stat-label">Delivered</div></div>
-      <div class="stat-card" style="--accent:var(--yellow)"><div class="stat-value">${active}</div><div class="stat-label">In Progress</div></div>
-      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-value">${allShelters.length}</div><div class="stat-label">Active Shelters</div></div>
+      <div class="stat-card" style="--accent:var(--yellow)"><div class="stat-value">${active}</div><div class="stat-label">Active Coordination</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-value">${deliveries.length}</div><div class="stat-label">Rider Deliveries</div></div>
     `;
     renderRecentDonations(donations.slice(0,5));
   }
@@ -336,21 +348,22 @@
   function renderRecentDonations(donations) {
     const container = document.getElementById('recent-donations-list');
     if (!donations.length) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h3>No donations yet</h3><p>Click "New Donation" to start.</p></div>`;
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h3>No donations yet</h3><p>Click "New Aid Donation" to coordinate surplus food or supplies.</p></div>`;
       return;
     }
     container.innerHTML = `
       <div class="table-wrapper">
         <table>
-          <thead><tr><th>Type</th><th>Quantity</th><th>Status</th><th>Expiry</th><th>Created</th></tr></thead>
+          <thead><tr><th>Type</th><th>Quantity</th><th>Status</th><th>Expiry</th><th>Created</th><th>Action</th></tr></thead>
           <tbody>${donations.map(d => {
             const exp = fmtExpiry(d.expiry_at);
             return `<tr>
               <td>${aidTypeBadge(d.aid_type)}</td>
-              <td>${d.quantity} ${d.unit}</td>
+              <td><strong>${d.quantity} ${d.unit}</strong></td>
               <td>${statusBadge(d.status)}</td>
               <td><span class="badge ${exp.cls}">${exp.label}</span></td>
               <td class="text-muted text-xs">${fmtTimeAgo(d.created_at)}</td>
+              <td><button class="btn btn-ghost btn-sm" onclick="showSection('my-donations')">View Details</button></td>
             </tr>`;
           }).join('')}</tbody>
         </table>
@@ -366,14 +379,14 @@
 
   function populateShelterDropdown() {
     const sel = document.getElementById('d-shelter');
-    sel.innerHTML = '<option value="">Select shelter...</option>' +
-      allShelters.map(s => `<option value="${s.id}">${s.name} — ${s.address || 'No address'}</option>`).join('');
+    sel.innerHTML = '<option value="">🌟 Auto-Match Best Fit Shelter (Recommended)</option>' +
+      allShelters.map(s => `<option value="${s.id}">${s.name} — ${s.address || 'Bengaluru'}</option>`).join('');
   }
 
   function renderShelters() {
     const grid = document.getElementById('shelters-grid');
     if (!allShelters.length) {
-      grid.innerHTML = '<p class="text-muted">No active shelters.</p>'; return;
+      grid.innerHTML = '<p class="text-muted">No active shelters currently.</p>'; return;
     }
     grid.innerHTML = allShelters.map(s => `
       <div class="shelter-req-card">
@@ -381,15 +394,22 @@
           <div style="font-weight:700;">${s.name}</div>
           <span class="badge badge-green">Active</span>
         </div>
-        <div class="text-secondary text-sm mb-2">${s.address || '—'} &nbsp;|&nbsp; 👥 ${s.capacity || 0} people</div>
+        <div class="text-secondary text-sm mb-2">${s.address || '—'} &nbsp;|&nbsp; 👥 ${s.capacity || 0} people served</div>
         <div class="req-bar">
           <div class="req-pill"><span>🍱</span> <strong>${s.food_required}</strong> food needed</div>
           <div class="req-pill"><span>💊</span> <strong>${s.medical_required}</strong> medical</div>
           <div class="req-pill"><span>🧰</span> <strong>${s.kit_required}</strong> kits</div>
         </div>
         ${s.compatibility_notes ? `<div class="text-xs text-muted mt-2">📋 ${s.compatibility_notes}</div>` : ''}
+        <button class="btn btn-outline btn-sm btn-block mt-3" onclick="selectShelterForDonation('${s.id}')">Donate to this Shelter</button>
       </div>
     `).join('');
+  }
+
+  function selectShelterForDonation(shelterId) {
+    document.getElementById('d-shelter').value = shelterId;
+    onShelterChange();
+    showSection('donate');
   }
 
   function onAidTypeChange() { onShelterChange(); }
@@ -405,8 +425,8 @@
 
     const fieldMap = { FOOD: 'food_required', MEDICAL: 'medical_required', KIT: 'kit_required' };
     const req = selectedShelter[fieldMap[aidType]] || 0;
-    document.getElementById('shelter-req-display').textContent = `${req} units`;
-    document.getElementById('d-qty-hint').textContent = `Max you can donate: ${req} units`;
+    document.getElementById('shelter-req-display').textContent = `${req} units needed`;
+    document.getElementById('d-qty-hint').textContent = `Recommended max: ${req} units to prevent waste.`;
     box.classList.remove('hidden');
   }
 
@@ -415,7 +435,7 @@
     const btn = document.getElementById('donate-btn');
     const err = document.getElementById('donate-error');
     err.classList.add('hidden');
-    btn.disabled = true; btn.textContent = 'Submitting…';
+    btn.disabled = true; btn.textContent = 'Creating batches & notifying riders…';
 
     try {
       const donation = await api.post('/donations', {
@@ -429,46 +449,71 @@
         pickup_lng:     parseFloat(document.getElementById('d-lng').value),
         shelter_id:     document.getElementById('d-shelter').value || undefined,
       });
-      toast('success', 'Donation submitted!', `ID: ${donation.id.slice(0,8)}… — awaiting match.`);
+
+      const batchCount = donation.batches?.length || 1;
+      toast('success', 'Donation dispatched!', `Created ${batchCount} batch(es) available for volunteer riders to accept!`);
       e.target.reset();
       document.getElementById('shelter-requirement-box').classList.add('hidden');
+      loadDashboard();
       showSection('my-donations');
     } catch(ex) {
       err.textContent = ex.message;
       err.classList.remove('hidden');
-    } finally { btn.disabled = false; btn.textContent = '🤲 Submit Donation'; }
+    } finally { btn.disabled = false; btn.textContent = '🤲 Submit & Dispatch Batches'; }
   }
 
   // ── My Donations ───────────────────────────────────────────────────
   async function loadMyDonations() {
-    const donations = await api.get('/donations').catch(() => []);
+    const [donations, deliveries] = await Promise.all([
+      api.get('/donations').catch(() => []),
+      api.get('/deliveries').catch(() => [])
+    ]);
+
     const container = document.getElementById('my-donations-list');
     if (!donations.length) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h3>No donations yet</h3><p>Head to "New Donation" to get started.</p></div>`;
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h3>No donations yet</h3><p>Head to "New Aid Donation" to get started.</p></div>`;
       return;
     }
+
     container.innerHTML = donations.map(d => {
       const exp = fmtExpiry(d.expiry_at);
-      const canPay = d.status === 'DELIVERED';
+      // Find all deliveries for this donation's batches
+      const donationDeliveries = deliveries.filter(del => del.donor_id === d.donor_id && del.aid_type === d.aid_type);
+      const delivery = donationDeliveries.find(del => del.status === 'DELIVERED') || donationDeliveries[0];
+
+      const isDelivered = d.status === 'DELIVERED' || delivery?.status === 'DELIVERED';
+      const hasRider = !!delivery?.rider_name;
+      const isPaid = delivery?.payment_status === 'SIMULATED_SUCCESS';
+
       return `
-        <div class="card mb-3">
+        <div class="card mb-3" style="border-left: 4px solid var(--accent);">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               ${aidTypeBadge(d.aid_type)}
               ${statusBadge(d.status)}
+              ${delivery ? statusBadge(delivery.status) : '<span class="badge badge-yellow">Batches Live</span>'}
             </div>
             <span class="text-muted text-xs">${fmtTimeAgo(d.created_at)}</span>
           </div>
+
           <div class="grid-2 text-sm mb-3">
             <div><span class="text-muted">Quantity:</span> <strong>${d.quantity} ${d.unit}</strong></div>
-            <div><span class="text-muted">Expiry:</span> <span class="badge ${exp.cls}">${exp.label}</span></div>
-            <div><span class="text-muted">Pickup:</span> ${d.pickup_address || '—'}</div>
-            <div><span class="text-muted">Donor name:</span> ${d.donor_name || '—'}</div>
+            <div><span class="text-muted">Expiry Deadline:</span> <span class="badge ${exp.cls}">${exp.label}</span></div>
+            <div><span class="text-muted">Pickup Location:</span> ${d.pickup_address || '—'}</div>
+            <div><span class="text-muted">Assigned Rider:</span> ${delivery?.rider_name ? `🏍️ ${delivery.rider_name}` : 'Awaiting rider pickup'}</div>
           </div>
+
           <div class="expiry-bar"><div class="expiry-bar-fill ${exp.mins < 15 ? 'urgent' : exp.mins < 30 ? 'warn' : 'safe'}" style="width:${exp.pct}%"></div></div>
-          <div class="flex gap-2 mt-3">
-            ${canPay ? `<button class="btn btn-primary btn-sm" onclick="openPaymentModal('${d.id}')">💳 Pay & Tip Rider</button>` : ''}
-            ${['PENDING','MATCHED'].includes(d.status) ? `<button class="btn btn-danger btn-sm" onclick="cancelDonation('${d.id}')">Cancel</button>` : ''}
+
+          <div class="flex gap-2 items-center flex-wrap mt-3">
+            ${delivery ? (
+              isPaid
+                ? `<span class="badge badge-green" style="padding:6px 12px;">✅ Paid ₹${delivery.paid_amount || 50} (Tip Included)</span>`
+                : `<button class="btn btn-primary btn-sm" onclick="openPaymentModal('${delivery.id}')">💳 Pay & Tip Rider (${delivery.rider_name || 'Volunteer'})</button>`
+            ) : `<span class="badge badge-yellow" style="padding:6px 12px;">⏳ Batches created — waiting for rider to accept ride</span>`}
+
+            ${delivery && isPaid ? `<button class="btn btn-ghost btn-sm" onclick="showSection('payments')">View Payment Receipt</button>` : ''}
+            ${['PENDING','MATCHED'].includes(d.status) && !delivery ? `<button class="btn btn-danger btn-sm" onclick="cancelDonation('${d.id}')">Cancel</button>` : ''}
           </div>
         </div>`;
     }).join('');
@@ -483,37 +528,92 @@
     } catch(ex) { toast('error', 'Failed', ex.message); }
   }
 
+  // ── Payments & Tips Section ─────────────────────────────────────────
+  async function loadPayments() {
+    const container = document.getElementById('payments-deliveries-list');
+    container.innerHTML = '<p class="text-muted text-sm">Loading delivery records…</p>';
+    try {
+      const deliveries = await api.get('/deliveries').catch(() => []);
+      if (!deliveries.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">💳</div>
+            <h3>No deliveries ready for payment yet</h3>
+            <p>Once a volunteer rider accepts a batch or completes delivery, you can compensate and tip them here.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = deliveries.map(del => {
+        const isPaid = del.payment_status === 'SIMULATED_SUCCESS';
+        return `
+          <div class="card mb-3">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                ${aidTypeBadge(del.aid_type)}
+                ${statusBadge(del.status)}
+                ${isPaid ? '<span class="badge badge-green">Paid</span>' : '<span class="badge badge-yellow">Payment Pending</span>'}
+              </div>
+              <span class="text-muted text-xs">${fmtTimeAgo(del.created_at)}</span>
+            </div>
+
+            <div class="grid-2 text-sm mb-3">
+              <div><span class="text-muted">Aid Batch:</span> <strong>${del.quantity} kg (${del.aid_type})</strong></div>
+              <div><span class="text-muted">Destination Shelter:</span> <strong>${del.shelter_name || 'Shelter'}</strong></div>
+              <div><span class="text-muted">Contributing Rider:</span> 🏍️ <strong>${del.rider_name || 'Volunteer Rider'}</strong></div>
+              <div><span class="text-muted">Delivery Status:</span> <strong>${del.status}</strong></div>
+            </div>
+
+            <div class="flex gap-2 items-center flex-wrap">
+              ${!isPaid
+                ? `<button class="btn btn-primary btn-sm" onclick="openPaymentModal('${del.id}')">💳 Pay Delivery Fee & Tip Rider</button>`
+                : `<button class="btn btn-success btn-sm" onclick="viewReceipt('${del.id}')">🧾 View Receipt & Split Breakdown</button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch(ex) {
+      container.innerHTML = `<div class="form-error">${ex.message}</div>`;
+    }
+  }
+
   // ── Payment Modal ──────────────────────────────────────────────────
   let paymentOverlay = null;
   let selectedPayMethod = 'UPI';
-  let pendingPaymentId = null;
 
-  async function openPaymentModal(donationId) {
-    // Find delivery for this donation
+  async function openPaymentModal(deliveryId) {
     let delivery;
     try {
-      const donation = await api.get(`/donations/${donationId}`);
-      const batch = donation.batches?.[0];
-      if (!batch) { toast('error','No batch found'); return; }
       const deliveries = await api.get('/deliveries').catch(() => []);
-      delivery = deliveries.find(d => d.batch_id === batch.id && d.status === 'DELIVERED');
+      delivery = deliveries.find(d => d.id === deliveryId);
     } catch {}
-    if (!delivery) { toast('error','No completed delivery found for this donation'); return; }
+
+    if (!delivery) {
+      toast('error', 'Delivery not found');
+      return;
+    }
 
     paymentOverlay = openModal(`
       <div class="modal-header">
-        <div class="modal-title">💳 Payment & Tip</div>
+        <div class="modal-title">💳 Pay Rider & Add Tip</div>
         <button class="modal-close" onclick="closeModal(paymentOverlay)">✕</button>
       </div>
       <div class="modal-body">
+        <div class="card mb-3" style="background:rgba(255,255,255,0.02);">
+          <div class="text-sm"><strong>Delivery:</strong> ${delivery.quantity} kg of ${delivery.aid_type} to ${delivery.shelter_name || 'Shelter'}</div>
+          <div class="text-xs text-muted mt-1">Rider: 🏍️ ${delivery.rider_name || 'Volunteer Rider'} | Status: ${delivery.status}</div>
+        </div>
+
         <div class="form-group">
-          <label class="form-label">Delivery Amount (₹)</label>
-          <input class="form-input" type="number" id="pay-amount" value="50" min="0" step="1" />
+          <label class="form-label">Base Delivery Fee (₹)</label>
+          <input class="form-input" type="number" id="pay-amount" value="50" min="0" step="5" />
+          <div class="form-hint">Standard urban civic delivery allowance.</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Tip for Rider (optional) (₹)</label>
-          <input class="form-input" type="number" id="pay-tip" value="0" min="0" step="1" />
-          <div class="form-hint">Tip is split proportionally among all riders who contributed.</div>
+          <label class="form-label">Volunteer Tip (₹)</label>
+          <input class="form-input" type="number" id="pay-tip" value="25" min="0" step="5" />
+          <div class="form-hint">Tip is shared proportionally among contributing riders if handoff occurred.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Payment Method</label>
@@ -535,7 +635,7 @@
             </button>
           </div>
         </div>
-        <p class="text-muted text-xs mt-2">⚡ This is a simulated payment — no real transaction will occur.</p>
+        <p class="text-muted text-xs mt-2">⚡ Simulated payment gateway — all payment methods supported.</p>
         <div id="pay-error" class="form-error hidden mt-2"></div>
       </div>
       <div class="modal-footer">
@@ -562,25 +662,26 @@
       const payment = await api.post('/payments/initiate', {
         delivery_id: deliveryId, amount, tip_amount: tip, method: selectedPayMethod
       });
-      pendingPaymentId = payment.payment_id;
 
       if (selectedPayMethod === 'CARD') {
-        toast('info', 'Processing card…', 'Simulating 3-second delay.');
-        await new Promise(r => setTimeout(r, 3000));
+        toast('info', 'Processing Card Payment…', 'Simulating 2-second bank authorization.');
+        await new Promise(r => setTimeout(r, 2000));
       }
 
       const result = await api.post('/payments/simulate', {
-        payment_id: pendingPaymentId, outcome
+        payment_id: payment.payment_id, outcome
       });
 
       closeModal(paymentOverlay);
       if (outcome === 'success') {
         showCompensationToast(result.compensation);
-        toast('success', 'Payment successful!', `₹${amount} paid via ${selectedPayMethod}`);
+        toast('success', 'Payment successful!', `₹${amount + tip} paid via ${selectedPayMethod}`);
       } else {
-        toast('error', 'Payment failed', 'Simulation returned failure.');
+        toast('error', 'Payment failed', 'Simulation returned payment decline.');
       }
       loadMyDonations();
+      loadPayments();
+      loadDashboard();
     } catch(ex) {
       if (errEl) { errEl.textContent = ex.message; errEl.classList.remove('hidden'); }
       else toast('error', 'Payment error', ex.message);
@@ -589,9 +690,59 @@
 
   function simulateFail(deliveryId) { simulatePayment(deliveryId, 'fail'); }
 
+  async function viewReceipt(deliveryId) {
+    try {
+      const comp = await api.get(`/payments/compensation/${deliveryId}`).catch(() => []);
+      const pay = await api.get(`/payments/delivery/${deliveryId}`).catch(() => null);
+      let compHtml = '<p class="text-muted text-sm">Standard single-rider delivery payout.</p>';
+      if (comp && comp.length) {
+        compHtml = `
+          <div class="table-wrapper mt-3">
+            <table>
+              <thead><tr><th>Contributing Rider</th><th>Route Share</th><th>Base Fee</th><th>Tip</th><th>Total Payout</th></tr></thead>
+              <tbody>
+                ${comp.map(c => `
+                  <tr>
+                    <td><strong>${c.name || 'Rider'}</strong></td>
+                    <td><span class="badge badge-blue">${Math.round(c.pct_share * 100)}%</span></td>
+                    <td>₹${c.base_amount.toFixed(2)}</td>
+                    <td>₹${c.tip_share.toFixed(2)}</td>
+                    <td><strong style="color:var(--green)">₹${c.total.toFixed(2)}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      openModal(`
+        <div class="modal-header">
+          <div class="modal-title">🧾 Payment & Compensation Receipt</div>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="grid-2 text-sm mb-3">
+            <div><span class="text-muted">Total Paid:</span> <strong>₹${pay ? (pay.amount + pay.tip_amount) : '—'}</strong></div>
+            <div><span class="text-muted">Method:</span> <strong>${pay?.method || 'UPI'}</strong></div>
+            <div><span class="text-muted">Status:</span> <span class="badge badge-green">COMPLETED</span></div>
+            <div><span class="text-muted">Tip Amount:</span> <strong>₹${pay?.tip_amount || 0}</strong></div>
+          </div>
+          <div class="card-title text-sm mb-2">⚖️ Pro-Rata Rider Compensation Breakdown</div>
+          ${compHtml}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Close</button>
+        </div>
+      `);
+    } catch (ex) {
+      toast('error', 'Receipt error', ex.message);
+    }
+  }
+
   function showCompensationToast(comp) {
     if (!comp || !comp.length) return;
-    const lines = comp.map(c => `Rider: ${Math.round(c.pct_share*100)}% → ₹${c.total.toFixed(2)}`).join(' | ');
+    const lines = comp.map(c => `${c.name || 'Rider'}: ${Math.round(c.pct_share*100)}% → ₹${c.total.toFixed(2)}`).join(' | ');
     toast('info', 'Rider Compensation Allocated', lines, 7000);
   }
 
@@ -602,9 +753,17 @@
       toast('warning', '⏰ Expiry Warning', `${aidType} donation expires in ${minutesLeft} min!`, 8000);
     });
     sock.on('payment:confirmed', ({ paymentId, status }) => {
-      if (status === 'SIMULATED_SUCCESS') toast('success', 'Payment confirmed', paymentId);
+      if (status === 'SIMULATED_SUCCESS') toast('success', 'Payment confirmed', `ID: ${paymentId}`);
     });
-    sock.on('delivery:status_changed', () => { loadDashboard(); });
+    sock.on('delivery:status_changed', () => {
+      loadDashboard();
+      if (!document.getElementById('sec-my-donations').classList.contains('hidden')) loadMyDonations();
+      if (!document.getElementById('sec-payments').classList.contains('hidden')) loadPayments();
+    });
+    sock.on('donation:matched', () => {
+      loadDashboard();
+      if (!document.getElementById('sec-my-donations').classList.contains('hidden')) loadMyDonations();
+    });
   }
 
   // ── Init ───────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ const { findAlternativeShelter, rerouteDelivery } = require('../logic/rerouting'
 
 const router = express.Router();
 
-// GET /api/deliveries — RIDER sees own; ADMIN sees all
+// GET /api/deliveries — RIDER sees own; ADMIN sees all; DONOR sees own donations; SHELTER sees own incoming
 router.get('/', authenticate, (req, res) => {
   let rows;
   if (req.user.role === 'ADMIN') {
@@ -16,7 +16,8 @@ router.get('/', authenticate, (req, res) => {
       SELECT del.*, u.name as rider_name,
              b.quantity, b.shelter_id,
              d.aid_type, d.expiry_at, d.donor_id,
-             s.address as shelter_address, u_s.name as shelter_name
+             s.address as shelter_address, u_s.name as shelter_name,
+             p.status as payment_status, p.amount as paid_amount, p.id as payment_id
       FROM deliveries del
       JOIN riders r ON del.rider_id = r.id
       JOIN users u ON r.id = u.id
@@ -24,6 +25,7 @@ router.get('/', authenticate, (req, res) => {
       JOIN donations d ON b.donation_id = d.id
       LEFT JOIN shelters s ON del.dest_shelter_id = s.id
       LEFT JOIN users u_s ON s.id = u_s.id
+      LEFT JOIN payments p ON p.delivery_id = del.id
       ORDER BY del.created_at DESC
     `).all();
   } else if (req.user.role === 'RIDER') {
@@ -37,6 +39,43 @@ router.get('/', authenticate, (req, res) => {
       LEFT JOIN shelters s ON del.dest_shelter_id = s.id
       LEFT JOIN users u_s ON s.id = u_s.id
       WHERE del.rider_id = ?
+      ORDER BY del.created_at DESC
+    `).all(req.user.id);
+  } else if (req.user.role === 'DONOR') {
+    rows = db.prepare(`
+      SELECT del.*, u.name as rider_name,
+             b.quantity, b.shelter_id,
+             d.aid_type, d.expiry_at, d.donor_id,
+             s.address as shelter_address, u_s.name as shelter_name,
+             p.status as payment_status, p.amount as paid_amount, p.id as payment_id
+      FROM deliveries del
+      JOIN riders r ON del.rider_id = r.id
+      JOIN users u ON r.id = u.id
+      JOIN batches b ON del.batch_id = b.id
+      JOIN donations d ON b.donation_id = d.id
+      LEFT JOIN shelters s ON del.dest_shelter_id = s.id
+      LEFT JOIN users u_s ON s.id = u_s.id
+      LEFT JOIN payments p ON p.delivery_id = del.id
+      WHERE d.donor_id = ?
+      ORDER BY del.created_at DESC
+    `).all(req.user.id);
+  } else if (req.user.role === 'SHELTER') {
+    rows = db.prepare(`
+      SELECT del.*, u.name as rider_name,
+             b.quantity, b.shelter_id,
+             d.aid_type, d.expiry_at, d.donor_id,
+             s.address as shelter_address, u_s.name as shelter_name,
+             d.pickup_address, d.notes,
+             u_don.name as donor_name
+      FROM deliveries del
+      JOIN riders r ON del.rider_id = r.id
+      JOIN users u ON r.id = u.id
+      JOIN batches b ON del.batch_id = b.id
+      JOIN donations d ON b.donation_id = d.id
+      LEFT JOIN shelters s ON del.dest_shelter_id = s.id
+      LEFT JOIN users u_s ON s.id = u_s.id
+      LEFT JOIN users u_don ON d.donor_id = u_don.id
+      WHERE del.dest_shelter_id = ?
       ORDER BY del.created_at DESC
     `).all(req.user.id);
   } else {
@@ -66,7 +105,12 @@ router.put('/:id/pickup', authenticate, authorize('RIDER'), (req, res) => {
   db.prepare("UPDATE donations SET status='IN_TRANSIT' WHERE id=(SELECT donation_id FROM batches WHERE id=?)").run(delivery.batch_id);
 
   const io = req.app.get('io');
-  if (io) io.to('admin').emit('delivery:status_changed', { deliveryId: delivery.id, status: 'PICKED_UP' });
+  if (io) {
+    const don = db.prepare('SELECT donor_id FROM donations WHERE id=(SELECT donation_id FROM batches WHERE id=?)').get(delivery.batch_id);
+    io.emit('delivery:status_changed', { deliveryId: delivery.id, status: 'PICKED_UP', riderId: req.user.id });
+    if (don) io.to(`donor:${don.donor_id}`).emit('delivery:status_changed', { deliveryId: delivery.id, status: 'PICKED_UP' });
+    if (delivery.dest_shelter_id) io.to(`shelter:${delivery.dest_shelter_id}`).emit('delivery:status_changed', { deliveryId: delivery.id, status: 'PICKED_UP' });
+  }
 
   res.json({ success: true, status: 'PICKED_UP' });
 });
@@ -86,7 +130,7 @@ router.put('/:id/deliver', authenticate, authorize('RIDER'), (req, res) => {
   // Mark rider's segment complete if it exists
   db.prepare(`
     UPDATE delivery_segments SET status='COMPLETED', completed_at=?
-    WHERE delivery_id=? AND rider_id=? AND status='IN_PROGRESS'
+    WHERE delivery_id=? AND rider_id=? AND status='PENDING'
   `).run(now, delivery.id, req.user.id);
 
   // Reduce shelter demand
@@ -94,13 +138,16 @@ router.put('/:id/deliver', authenticate, authorize('RIDER'), (req, res) => {
   const donation = db.prepare('SELECT * FROM donations WHERE id=?').get(batch.donation_id);
   const fieldMap = { FOOD: 'food_required', MEDICAL: 'medical_required', KIT: 'kit_required' };
   const field = fieldMap[donation.aid_type];
-  db.prepare(`UPDATE shelters SET ${field} = MAX(0, ${field} - ?), updated_at=unixepoch() WHERE id=?`)
-    .run(batch.quantity, delivery.dest_shelter_id);
+  if (field && delivery.dest_shelter_id) {
+    db.prepare(`UPDATE shelters SET ${field} = MAX(0, ${field} - ?), updated_at=unixepoch() WHERE id=?`)
+      .run(batch.quantity, delivery.dest_shelter_id);
+  }
 
   const io = req.app.get('io');
   if (io) {
-    io.to('admin').emit('delivery:status_changed', { deliveryId: delivery.id, status: 'DELIVERED' });
-    io.to(`rider:${req.user.id}`).emit('delivery:status_changed', { deliveryId: delivery.id, status: 'DELIVERED' });
+    io.emit('delivery:status_changed', { deliveryId: delivery.id, status: 'DELIVERED', riderId: req.user.id });
+    if (donation) io.to(`donor:${donation.donor_id}`).emit('delivery:status_changed', { deliveryId: delivery.id, status: 'DELIVERED' });
+    if (delivery.dest_shelter_id) io.to(`shelter:${delivery.dest_shelter_id}`).emit('delivery:status_changed', { deliveryId: delivery.id, status: 'DELIVERED' });
   }
 
   res.json({ success: true, status: 'DELIVERED' });
@@ -119,7 +166,7 @@ router.put('/:id/breakdown', authenticate, authorize('RIDER'), (req, res) => {
 
   const io = req.app.get('io');
   if (io) {
-    if (result.success) {
+    if (result.success && result.rescueRider) {
       io.to(`rider:${result.rescueRider.id}`).emit('breakdown:rescue_assigned', {
         deliveryId: delivery.id,
         breakdownLat: lat, breakdownLng: lng,
@@ -134,6 +181,7 @@ router.put('/:id/breakdown', authenticate, authorize('RIDER'), (req, res) => {
       rescueRiderId: result.rescueRider?.id,
       pctA: result.pctA, pctB: result.pctB
     });
+    io.emit('delivery:status_changed', { deliveryId: delivery.id, status: 'IN_TRANSIT' });
   }
 
   res.json(result);
@@ -162,6 +210,7 @@ router.put('/:id/reroute', authenticate, authorize('ADMIN'), (req, res) => {
       newShelterId: targetShelterId,
       newShelter: result.newShelter
     });
+    io.emit('delivery:status_changed', { deliveryId: delivery.id, status: 'REROUTED' });
     io.to('admin').emit('delivery:rerouted', { deliveryId: delivery.id, newShelterId: targetShelterId });
   }
 
