@@ -3,51 +3,225 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AidSync — Rider Portal</title>
-  <meta name="description" content="Accept and deliver aid batches, manage your status, and handle breakdowns." />
+  <title>AidSync — Volunteer Rider Portal</title>
+  <meta name="description" content="Accept and deliver perishable aid batches, manage vehicle capacity, GPS status, and handle breakdown handoffs." />
   <link rel="stylesheet" href="/css/styles.css" />
   <style>
-    .batch-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:18px; margin-bottom:14px; transition:border-color .15s; }
-    .batch-card:hover { border-color:rgba(255,255,255,0.15); }
-    .countdown { font-size:0.85rem; font-weight:700; font-variant-numeric:tabular-nums; }
-    .status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-size:0.8rem; font-weight:600; }
-    .status-pill.available { background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); }
-    .status-pill.busy      { background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); }
-    .status-pill.offline   { background:rgba(100,116,139,0.15); color:var(--text-muted); border:1px solid rgba(100,116,139,0.3); }
-    .status-pill.breakdown { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
-    .rescue-alert { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-md); padding:16px; margin-bottom:16px; animation: rescuePulse 1.5s infinite; }
-    @keyframes rescuePulse { 0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0.2); } 50% { box-shadow:0 0 0 8px rgba(239,68,68,0); } }
+    .batch-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .batch-card:hover {
+      border-color: rgba(77, 163, 255, 0.35);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      transform: translateY(-1px);
+    }
+    .batch-card.reserved {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, var(--bg-card) 100%);
+    }
+    .countdown-box {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .status-pill.available { background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.35); }
+    .status-pill.busy      { background: rgba(245, 158, 11, 0.15); color: var(--yellow); border: 1px solid rgba(245, 158, 11, 0.35); }
+    .status-pill.offline   { background: rgba(100, 116, 139, 0.15); color: var(--text-muted); border: 1px solid rgba(100, 116, 139, 0.3); }
+    .status-pill.breakdown { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.35); }
+    
+    .status-pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .status-pill.available .status-pulse-dot {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulseGreen 2s infinite;
+    }
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .rescue-banner {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(220, 38, 38, 0.05) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: var(--radius-md);
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      animation: rescueGlow 2s infinite alternate;
+    }
+    @keyframes rescueGlow {
+      from { box-shadow: 0 0 10px rgba(239, 68, 68, 0.15); }
+      to { box-shadow: 0 0 24px rgba(239, 68, 68, 0.35); }
+    }
+
+    .delivery-timeline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      margin: 16px 0;
+      padding: 0 8px;
+    }
+    .delivery-timeline::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 20px;
+      right: 20px;
+      height: 2px;
+      background: var(--border);
+      z-index: 1;
+      transform: translateY(-50%);
+    }
+    .dt-step {
+      position: relative;
+      z-index: 2;
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+    .dt-step.active {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: rgba(77, 163, 255, 0.1);
+      box-shadow: 0 0 10px rgba(77, 163, 255, 0.25);
+    }
+    .dt-step.done {
+      border-color: var(--green);
+      color: var(--green);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .route-split-preview {
+      display: flex;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      height: 26px;
+      margin: 12px 0 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .route-split-a {
+      background: rgba(77, 163, 255, 0.35);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .route-split-b {
+      background: rgba(24, 199, 183, 0.35);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
 
+<!-- ── AUTH PAGE ─────────────────────────────────────────────────────────── -->
 <div id="auth-page" class="auth-page">
   <div class="auth-container">
     <div class="auth-logo">
-      <div style="font-size:2.5rem; margin-bottom:8px;">🏍️</div>
-      <h1>AidSync</h1>
-      <p>Rider Portal</p>
+      <div style="font-size:2.6rem; margin-bottom:8px;">🏍️</div>
+      <div style="font-size:1.8rem; font-weight:800; color:#fff; letter-spacing:-0.02em;">AidSync</div>
+      <p style="color:var(--text-muted); font-size:0.85rem;">Volunteer Rider Command & Last-Mile Dispatch</p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs">
         <button class="auth-tab active" id="tab-login" onclick="showTab('login')">Sign In</button>
-        <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register</button>
+        <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register Rider</button>
       </div>
+
+      <!-- Sign In Form -->
       <form id="login-form" onsubmit="doLogin(event)">
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="login-email" required /></div>
-        <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="login-password" required /></div>
+        <div class="form-group">
+          <label class="form-label">Rider Email</label>
+          <input class="form-input" type="email" id="login-email" placeholder="arjun@rider.in" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="login-password" placeholder="••••••••" required />
+        </div>
         <div id="login-error" class="form-error hidden"></div>
-        <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In</button>
-        <p style="text-align:center;margin-top:16px;font-size:0.8rem;"><a href="/" style="color:var(--text-muted)">← Back</a></p>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In to Rider Fleet</button>
+        <p class="text-muted text-xs text-center mt-3">Demo account: <code>arjun@rider.in</code> / <code>rider123</code> or <code>sonia@rider.in</code></p>
+        <p style="text-align:center; margin-top:14px; font-size:0.8rem;"><a href="/" style="color:var(--text-muted)">← Back to Role Gateway</a></p>
       </form>
+
+      <!-- Register Form -->
       <form id="register-form" class="hidden" onsubmit="doRegister(event)">
-        <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" type="text" id="reg-name" required /></div>
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="reg-email" required /></div>
-        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="reg-phone" /></div>
-        <div class="form-group"><label class="form-label">Vehicle Type</label>
-          <select class="form-select" id="reg-vehicle"><option value="BIKE">🏍️ Bike</option><option value="SCOOTER">🛵 Scooter</option><option value="CAR">🚗 Car</option><option value="CYCLE">🚲 Cycle</option></select></div>
-        <div class="form-group"><label class="form-label">Capacity (kg)</label><input class="form-input" type="number" id="reg-capacity" value="20" min="1" /></div>
-        <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="reg-password" required /></div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" type="text" id="reg-name" placeholder="Arjun Rao" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="reg-email" placeholder="arjun@rider.in" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input class="form-input" type="tel" id="reg-phone" placeholder="+91-9876543210" />
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Vehicle Type</label>
+            <select class="form-select" id="reg-vehicle">
+              <option value="BIKE">🏍️ Motorbike</option>
+              <option value="SCOOTER">🛵 Electric Scooter</option>
+              <option value="CAR">🚗 Compact Car</option>
+              <option value="CYCLE">🚲 Bicycle</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payload Capacity (kg)</label>
+            <input class="form-input" type="number" id="reg-capacity" value="20" min="1" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="reg-password" placeholder="••••••••" required />
+        </div>
         <div id="reg-error" class="form-error hidden"></div>
         <button class="btn btn-primary btn-block btn-lg" type="submit" id="reg-btn">Create Rider Account</button>
       </form>
@@ -55,49 +229,109 @@
   </div>
 </div>
 
+<!-- ── MAIN RIDER APP ────────────────────────────────────────────────────── -->
 <div id="app" class="app-shell hidden">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <h1>AidSync</h1>
-      <span class="role-badge" style="background:rgba(59,130,246,0.15); color:var(--rider-color);">Rider</span>
+      <div class="icon" style="background:rgba(77,163,255,0.12); border-color:rgba(77,163,255,0.25);">🏍️</div>
+      <div>
+        <div class="name">AidSync</div>
+        <span class="role-badge" style="background:rgba(77,163,255,0.15); color:var(--blue); border-color:rgba(77,163,255,0.3);">Volunteer Rider</span>
+      </div>
     </div>
     <div class="nav-section">
-      <div class="nav-section-label">Menu</div>
-      <button class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard"><span class="icon">📊</span> Dashboard</button>
+      <div class="nav-section-label">Fleet Operations</div>
+      <button class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard"><span class="icon">📊</span> Overview</button>
       <button class="nav-item" onclick="showSection('available')" id="nav-available"><span class="icon">📦</span> Available Batches</button>
-      <button class="nav-item" onclick="showSection('my-deliveries')" id="nav-my-deliveries"><span class="icon">🚚</span> My Deliveries</button>
-      <button class="nav-item" onclick="showSection('profile')" id="nav-profile"><span class="icon">👤</span> Profile & Status</button>
+      <button class="nav-item" onclick="showSection('my-deliveries')" id="nav-my-deliveries"><span class="icon">🚚</span> Active Deliveries</button>
+      <button class="nav-item" onclick="showSection('profile')" id="nav-profile"><span class="icon">👤</span> Vehicle & GPS</button>
     </div>
-    <div style="margin-top:auto;padding:0 12px;">
+    <div style="margin-top:auto; padding:0 12px;">
       <button class="nav-item" onclick="logout()"><span class="icon">🚪</span> Logout</button>
     </div>
   </aside>
 
   <div class="main-content">
+    <!-- Topbar -->
     <div class="topbar">
-      <span class="topbar-title" id="section-title">Dashboard</span>
+      <div class="flex items-center gap-3">
+        <span class="topbar-title" id="section-title">Fleet Overview</span>
+        <span id="rider-status-display" class="status-pill offline">
+          <span class="status-pulse-dot"></span> Offline
+        </span>
+      </div>
       <div class="topbar-actions">
-        <span id="rider-status-display" class="status-pill offline">⚫ Offline</span>
-        <span id="user-name-display" style="font-size:0.85rem;font-weight:600;"></span>
+        <button class="btn btn-sm btn-success" id="btn-quick-online" onclick="setRiderStatus('AVAILABLE')">🟢 Go Online</button>
+        <button class="btn btn-sm btn-ghost" id="btn-quick-offline" onclick="setRiderStatus('OFFLINE')">⚫ Offline</button>
+        <div style="border-left:1px solid var(--border); height:24px; margin:0 4px;"></div>
+        <span id="user-name-display" style="font-size:0.85rem; font-weight:700; color:#fff;"></span>
       </div>
     </div>
+
     <div class="page-content">
 
-      <!-- Rescue Alert (shown when breakdown rescue assigned) -->
-      <div id="rescue-alert" class="rescue-alert hidden">
-        <div style="font-weight:700;color:var(--red);margin-bottom:6px;">🆘 Rescue Assignment!</div>
-        <div id="rescue-details" class="text-sm"></div>
+      <!-- Rescue Alert Banner (shown when rider is assigned a breakdown rescue) -->
+      <div id="rescue-alert" class="rescue-banner hidden">
+        <div class="flex items-center justify-between mb-2">
+          <div style="font-weight:800; font-size:1rem; color:var(--red); display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.3rem;">🆘</span> EMERGENCY RESCUE ASSIGNMENT
+          </div>
+          <span class="badge badge-red">Urgent Handoff</span>
+        </div>
+        <div id="rescue-details" class="text-sm" style="line-height:1.6;"></div>
+        <div class="mt-3 flex gap-2">
+          <button class="btn btn-primary btn-sm" onclick="showSection('my-deliveries')">🚚 Open Delivery Details</button>
+        </div>
       </div>
 
-      <!-- Dashboard -->
+      <!-- Overview / Dashboard -->
       <section id="sec-dashboard">
         <div class="stats-grid" id="rider-stats"></div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Quick Actions</div></div>
-          <div class="flex gap-3 flex-wrap">
-            <button class="btn btn-success" onclick="setRiderStatus('AVAILABLE')">🟢 Go Online</button>
+
+        <!-- Network Flow Telemetry -->
+        <div class="network-flow">
+          <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:12px;">
+            📡 Live Logistics Pipeline — Entity Telemetry
+          </div>
+          <div class="network-nodes">
+            <div class="network-node donor">
+              <div class="network-node-icon">🤲</div>
+              <div class="network-node-title">Civic Donors</div>
+              <div class="network-node-sub">Surplus & Meals</div>
+            </div>
+            <div class="network-arrow">→</div>
+            <div class="network-node batch">
+              <div class="network-node-icon">📦</div>
+              <div class="network-node-title">Aid Batches</div>
+              <div class="network-node-sub">Auto Split (<25kg)</div>
+            </div>
+            <div class="network-arrow">→</div>
+            <div class="network-node rider" style="border-color:var(--blue); box-shadow:0 0 16px rgba(77, 163, 255, 0.25);">
+              <div class="network-node-icon">🏍️</div>
+              <div class="network-node-title" style="color:var(--blue);">Volunteer Riders</div>
+              <div class="network-node-sub">Active Transport</div>
+            </div>
+            <div class="network-arrow">→</div>
+            <div class="network-node shelter">
+              <div class="network-node-icon">🏠</div>
+              <div class="network-node-title">Receiving Shelter</div>
+              <div class="network-node-sub">Demand Met</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Quick Readiness & Dispatch Control</div>
+              <div class="card-subtitle">Broadcast your availability to the automated batch allocation matching engine</div>
+            </div>
+          </div>
+          <div class="flex gap-3 flex-wrap items-center">
+            <button class="btn btn-success" onclick="setRiderStatus('AVAILABLE')">🟢 Go Online (Ready for Missions)</button>
             <button class="btn btn-ghost" onclick="setRiderStatus('OFFLINE')">⚫ Go Offline</button>
-            <button class="btn btn-primary" onclick="showSection('available')">📦 View Batches</button>
+            <button class="btn btn-primary" onclick="showSection('available')">📦 View Available Batches</button>
+            <button class="btn btn-outline" onclick="showSection('profile')">📍 Calibrate GPS Location</button>
           </div>
         </div>
       </section>
@@ -105,7 +339,10 @@
       <!-- Available Batches -->
       <section id="sec-available" class="hidden">
         <div class="flex items-center justify-between mb-4">
-          <div class="section-title" style="margin:0;">📦 Available Batches</div>
+          <div>
+            <div class="section-title" style="margin:0;">📦 Available Aid Batches</div>
+            <p class="text-secondary text-sm">Real-time surplus food and medical supplies waiting for volunteer transport.</p>
+          </div>
           <button class="btn btn-ghost btn-sm" onclick="loadAvailableBatches()">🔄 Refresh</button>
         </div>
         <div id="available-batches-list"></div>
@@ -114,36 +351,42 @@
       <!-- My Deliveries -->
       <section id="sec-my-deliveries" class="hidden">
         <div class="flex items-center justify-between mb-4">
-          <div class="section-title" style="margin:0;">🚚 My Deliveries</div>
+          <div>
+            <div class="section-title" style="margin:0;">🚚 Active Deliveries & Mission History</div>
+            <p class="text-secondary text-sm">Track pickup, in-transit status, and emergency breakdown recovery handoffs.</p>
+          </div>
           <button class="btn btn-ghost btn-sm" onclick="loadMyDeliveries()">🔄 Refresh</button>
         </div>
         <div id="my-deliveries-list"></div>
       </section>
 
-      <!-- Profile -->
+      <!-- Profile & GPS Status -->
       <section id="sec-profile" class="hidden">
-        <div class="section-title">👤 Profile & Status</div>
-        <div class="card" style="max-width:480px;">
+        <div class="section-title">👤 Vehicle & GPS Configuration</div>
+        <p class="text-secondary text-sm mb-4">Update your vehicle capacity, status, and simulated GPS coordinates for closest-rider dispatch.</p>
+        <div class="card" style="max-width:540px;">
           <form onsubmit="updateProfile(event)">
             <div class="form-group">
-              <label class="form-label">Status</label>
+              <label class="form-label">Current Dispatch Status</label>
               <select class="form-select" id="profile-status">
-                <option value="AVAILABLE">🟢 Available</option>
-                <option value="OFFLINE">⚫ Offline</option>
+                <option value="AVAILABLE">🟢 Available (Ready to Receive Batches)</option>
+                <option value="OFFLINE">⚫ Offline (Not Accepting Trips)</option>
               </select>
             </div>
-            <div class="form-group">
-              <label class="form-label">Vehicle Type</label>
-              <select class="form-select" id="profile-vehicle">
-                <option value="BIKE">🏍️ Bike</option>
-                <option value="SCOOTER">🛵 Scooter</option>
-                <option value="CAR">🚗 Car</option>
-                <option value="CYCLE">🚲 Cycle</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Capacity (kg)</label>
-              <input class="form-input" type="number" id="profile-capacity" value="20" min="1" />
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Vehicle Type</label>
+                <select class="form-select" id="profile-vehicle">
+                  <option value="BIKE">🏍️ Motorbike</option>
+                  <option value="SCOOTER">🛵 Electric Scooter</option>
+                  <option value="CAR">🚗 Compact Car</option>
+                  <option value="CYCLE">🚲 Bicycle</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Payload Capacity (kg)</label>
+                <input class="form-input" type="number" id="profile-capacity" value="20" min="1" />
+              </div>
             </div>
             <div class="grid-2">
               <div class="form-group">
@@ -155,10 +398,16 @@
                 <input class="form-input" type="number" id="profile-lng" value="77.5946" step="0.0001" />
               </div>
             </div>
-            <button class="btn btn-primary btn-block" type="submit">Update Profile</button>
+            <div class="flex gap-2 mb-3">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="setPresetLocation(12.9716, 77.5946)">MG Road (Central)</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="setPresetLocation(12.9784, 77.6408)">Indiranagar (East)</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="setPresetLocation(12.9352, 77.6245)">Koramangala (South)</button>
+            </div>
+            <button class="btn btn-primary btn-block" type="submit">Update Vehicle & GPS Profile</button>
           </form>
         </div>
       </section>
+
     </div>
   </div>
 </div>
@@ -196,7 +445,7 @@
     } catch(ex) {
       document.getElementById('login-error').textContent = ex.message;
       document.getElementById('login-error').classList.remove('hidden');
-    } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+    } finally { btn.disabled = false; btn.textContent = 'Sign In to Rider Fleet'; }
   }
 
   async function doRegister(e) {
@@ -237,8 +486,10 @@
       document.getElementById(`nav-${s}`)?.classList.toggle('active', s === name);
     });
     document.getElementById('section-title').textContent = {
-      dashboard: 'Dashboard', available: 'Available Batches',
-      'my-deliveries': 'My Deliveries', profile: 'Profile & Status'
+      dashboard: 'Fleet Overview',
+      available: 'Available Batches',
+      'my-deliveries': 'Active Deliveries',
+      profile: 'Vehicle & GPS'
     }[name];
     if (name === 'available') loadAvailableBatches();
     if (name === 'my-deliveries') loadMyDeliveries();
@@ -249,10 +500,30 @@
     const deliveries = await api.get('/deliveries').catch(() => []);
     const done = deliveries.filter(d => d.status === 'DELIVERED').length;
     const active = deliveries.filter(d => !['DELIVERED','FAILED'].includes(d.status)).length;
+    const totalKg = deliveries.reduce((acc, d) => acc + (parseFloat(d.quantity) || 0), 0);
+    const completedPct = deliveries.length ? Math.round((done / deliveries.length) * 100) : 100;
+
     document.getElementById('rider-stats').innerHTML = `
-      <div class="stat-card"><div class="stat-value">${done}</div><div class="stat-label">Delivered</div></div>
-      <div class="stat-card" style="--accent:var(--yellow)"><div class="stat-value">${active}</div><div class="stat-label">Active</div></div>
-      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-value">${deliveries.length}</div><div class="stat-label">Total Trips</div></div>
+      <div class="stat-card" style="--accent:var(--green)">
+        <div class="stat-value">${done}</div>
+        <div class="stat-label">Missions Completed</div>
+        <div class="text-xs text-muted mt-2">${completedPct}% Reliability Rate</div>
+      </div>
+      <div class="stat-card" style="--accent:var(--yellow)">
+        <div class="stat-value">${active}</div>
+        <div class="stat-label">Active Missions</div>
+        <div class="text-xs text-muted mt-2">${active > 0 ? 'In-Flight Transport' : 'Fleet Standing By'}</div>
+      </div>
+      <div class="stat-card" style="--accent:var(--blue)">
+        <div class="stat-value">${totalKg.toFixed(1)} <span style="font-size:1.1rem;font-weight:600;">kg</span></div>
+        <div class="stat-label">Total Aid Transported</div>
+        <div class="text-xs text-muted mt-2">Perishables & fragile kits</div>
+      </div>
+      <div class="stat-card" style="--accent:var(--teal)">
+        <div class="stat-value">${deliveries.length}</div>
+        <div class="stat-label">Total Trips Logged</div>
+        <div class="text-xs text-muted mt-2">Civic Logistics Impact</div>
+      </div>
     `;
   }
 
@@ -261,7 +532,12 @@
     const batches = await api.get('/batches/available').catch(() => []);
     const container = document.getElementById('available-batches-list');
     if (!batches.length) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><h3>No batches available</h3><p>Check back soon or refresh.</p></div>`;
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <h3>No aid batches currently available</h3>
+          <p>All batches have been claimed by the fleet, or new donor surplus has not arrived yet. Stay online to receive auto-dispatch broadcasts.</p>
+        </div>`;
       return;
     }
     container.innerHTML = batches.map(b => {
@@ -269,22 +545,33 @@
       return `
         <div class="batch-card" id="batch-${b.id}">
           <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">${aidTypeBadge(b.aid_type)} ${statusBadge(b.status)}</div>
-            <span class="badge ${exp.cls}">${exp.label}</span>
+            <div class="flex items-center gap-2">
+              ${aidTypeBadge(b.aid_type)}
+              ${statusBadge(b.status)}
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="badge ${exp.cls}">${exp.label}</span>
+              <span class="text-xs text-muted" style="font-family:var(--font-mono);">ID: ${b.id.slice(0,8)}</span>
+            </div>
           </div>
+
           <div class="grid-2 text-sm mb-3">
-            <div><span class="text-muted">Qty:</span> <strong>${b.quantity} ${b.unit || 'kg'}</strong></div>
-            <div><span class="text-muted">From:</span> ${b.donor_name || '—'}</div>
-            <div><span class="text-muted">Pickup:</span> ${b.pickup_address || `(${b.pickup_lat?.toFixed(4)}, ${b.pickup_lng?.toFixed(4)})`}</div>
-            <div><span class="text-muted">Shelter:</span> ${b.shelter_name || '—'}</div>
-            <div><span class="text-muted">Drop:</span> ${b.shelter_address || '—'}</div>
-            <div><span class="text-muted">Notes:</span> ${b.notes || '—'}</div>
+            <div><span class="text-muted">Payload Quantity:</span> <strong style="font-size:1.05rem;">${b.quantity} ${b.unit || 'kg'}</strong></div>
+            <div><span class="text-muted">Donor Source:</span> <strong>${b.donor_name || 'Civic Donor'}</strong></div>
+            <div><span class="text-muted">Pickup Location:</span> ${b.pickup_address || `(${b.pickup_lat?.toFixed(4)}, ${b.pickup_lng?.toFixed(4)})`}</div>
+            <div><span class="text-muted">Destination Shelter:</span> 🏠 <strong>${b.shelter_name || 'Assigned Shelter'}</strong></div>
+            <div><span class="text-muted">Shelter Address:</span> ${b.shelter_address || '—'}</div>
+            <div><span class="text-muted">Special Handling:</span> ${b.notes || 'Handle with care'}</div>
           </div>
-          <div class="expiry-bar"><div class="expiry-bar-fill ${exp.mins < 15 ? 'urgent' : exp.mins < 30 ? 'warn' : 'safe'}" style="width:${exp.pct}%"></div></div>
-          <div class="flex gap-2 mt-3">
-            <button class="btn btn-primary btn-sm" onclick="reserveBatch('${b.id}')">🔒 Reserve</button>
+
+          <div class="expiry-bar">
+            <div class="expiry-bar-fill ${exp.mins < 15 ? 'urgent' : exp.mins < 30 ? 'warn' : 'safe'}" style="width:${exp.pct}%"></div>
           </div>
-          <div id="res-timer-${b.id}" class="text-xs text-muted mt-2 hidden"></div>
+
+          <div class="flex gap-2 mt-4 items-center flex-wrap">
+            <button class="btn btn-primary btn-sm" onclick="reserveBatch('${b.id}')">🔒 Lock & Reserve Batch</button>
+            <div id="res-timer-${b.id}" class="countdown-box hidden"></div>
+          </div>
         </div>`;
     }).join('');
   }
@@ -293,15 +580,20 @@
     try {
       await setRiderStatus('AVAILABLE'); // ensure online
       const res = await api.post(`/batches/${batchId}/reserve`);
-      toast('info', 'Batch reserved!', `Confirm within ${res.ttl_seconds}s or it will auto-release.`);
+      toast('info', 'Batch locked & reserved!', `Confirm acceptance within ${res.ttl_seconds}s or it will automatically release back to the fleet.`);
       startReservationCountdown(batchId, res.expires_at);
-      // Show confirm button
+
       const card = document.getElementById(`batch-${batchId}`);
       if (card) {
-        const btnRow = card.querySelector('.flex.gap-2.mt-3');
-        if (btnRow) btnRow.innerHTML = `
-          <button class="btn btn-success btn-sm" onclick="confirmBatch('${batchId}')">✅ Confirm Pickup</button>
-          <button class="btn btn-ghost btn-sm" onclick="releaseBatch('${batchId}')">Release</button>`;
+        card.classList.add('reserved');
+        const btnRow = card.querySelector('.flex.gap-2.mt-4');
+        if (btnRow) {
+          btnRow.innerHTML = `
+            <button class="btn btn-success btn-sm" onclick="confirmBatch('${batchId}')">✅ Confirm & Accept Ride</button>
+            <button class="btn btn-ghost btn-sm" onclick="releaseBatch('${batchId}')">Release Batch</button>
+            <div id="res-timer-${batchId}" class="countdown-box"></div>`;
+          startReservationCountdown(batchId, res.expires_at);
+        }
       }
     } catch(ex) { toast('error', 'Reserve failed', ex.message); }
   }
@@ -310,15 +602,22 @@
     const timerEl = document.getElementById(`res-timer-${batchId}`);
     if (timerEl) timerEl.classList.remove('hidden');
 
+    if (reservationTimers[batchId]) clearInterval(reservationTimers[batchId]);
+
     const interval = setInterval(() => {
       const remaining = expiresAt - Math.floor(Date.now() / 1000);
       if (remaining <= 0) {
         clearInterval(interval);
-        if (timerEl) timerEl.textContent = '⏰ Reservation expired';
+        if (timerEl) {
+          timerEl.textContent = '⏰ Reservation expired';
+          timerEl.style.borderColor = 'var(--red)';
+        }
         loadAvailableBatches();
         return;
       }
-      if (timerEl) timerEl.innerHTML = `⏱ Reservation expires in: <strong class="countdown ${remaining < 60 ? 'text-red' : 'text-yellow'}">${remaining}s</strong>`;
+      if (timerEl) {
+        timerEl.innerHTML = `⏱ TTL: <strong class="${remaining < 60 ? 'text-red' : 'text-yellow'}" style="font-variant-numeric:tabular-nums;">${remaining}s</strong> remaining`;
+      }
     }, 1000);
     reservationTimers[batchId] = interval;
   }
@@ -327,7 +626,7 @@
     try {
       const delivery = await api.post(`/batches/${batchId}/confirm`);
       if (reservationTimers[batchId]) { clearInterval(reservationTimers[batchId]); delete reservationTimers[batchId]; }
-      toast('success', 'Delivery created!', `Delivery ID: ${delivery.id.slice(0,8)}…`);
+      toast('success', 'Ride accepted!', `Delivery mission activated (ID: ${delivery.id.slice(0,8)}…)`);
       showSection('my-deliveries');
     } catch(ex) { toast('error', 'Confirm failed', ex.message); }
   }
@@ -336,7 +635,7 @@
     try {
       await api.put(`/batches/${batchId}/release`);
       if (reservationTimers[batchId]) { clearInterval(reservationTimers[batchId]); delete reservationTimers[batchId]; }
-      toast('info', 'Batch released');
+      toast('info', 'Batch released back to available pool');
       loadAvailableBatches();
     } catch(ex) { toast('error', 'Release failed', ex.message); }
   }
@@ -346,29 +645,65 @@
     const deliveries = await api.get('/deliveries').catch(() => []);
     const container = document.getElementById('my-deliveries-list');
     if (!deliveries.length) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🚚</div><h3>No deliveries yet</h3><p>Reserve a batch to get started.</p></div>`;
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🚚</div>
+          <h3>No assigned missions yet</h3>
+          <p>Reserve an available batch from the fleet pool to initiate last-mile aid transit.</p>
+        </div>`;
       return;
     }
+
     container.innerHTML = deliveries.map(d => {
-      const canPickup = d.status === 'PENDING';
-      const canDeliver = d.status === 'PICKED_UP' || d.status === 'IN_TRANSIT' || d.status === 'REROUTED';
+      const isAssigned = d.status === 'ASSIGNED' || d.status === 'PENDING';
+      const isPickedUp = d.status === 'PICKED_UP';
+      const isInTransit = d.status === 'IN_TRANSIT' || d.status === 'REROUTED';
+      const isDelivered = d.status === 'DELIVERED';
+      const isBreakdown = d.status === 'BREAKDOWN';
+
+      const canPickup = isAssigned;
+      const canDeliver = isPickedUp || isInTransit;
       const canBreakdown = canDeliver;
+
       return `
-        <div class="card mb-3">
+        <div class="card mb-3" style="border-left: 4px solid ${isDelivered ? 'var(--green)' : isBreakdown ? 'var(--red)' : 'var(--blue)'};">
           <div class="flex items-center justify-between mb-3">
-            <div class="flex gap-2">${aidTypeBadge(d.aid_type)} ${statusBadge(d.status)}</div>
+            <div class="flex items-center gap-2">
+              ${aidTypeBadge(d.aid_type)}
+              ${statusBadge(d.status)}
+              <span class="text-xs text-muted" style="font-family:var(--font-mono);">Delivery: ${d.id.slice(0,8)}</span>
+            </div>
             <span class="text-muted text-xs">${fmtTimeAgo(d.created_at)}</span>
           </div>
-          <div class="grid-2 text-sm mb-3">
-            <div><span class="text-muted">Qty:</span> <strong>${d.quantity} ${d.unit || 'kg'}</strong></div>
-            <div><span class="text-muted">Shelter:</span> ${d.shelter_name || '—'}</div>
-            <div><span class="text-muted">Pickup:</span> ${d.pickup_address || '—'}</div>
-            <div><span class="text-muted">Drop:</span> ${d.shelter_address || '—'}</div>
+
+          <!-- Step Progress Track -->
+          <div class="delivery-timeline">
+            <div class="dt-step ${isAssigned || isPickedUp || isInTransit || isDelivered ? (isAssigned ? 'active' : 'done') : ''}">
+              <span>1</span> Assigned
+            </div>
+            <div class="dt-step ${isPickedUp || isInTransit || isDelivered ? (isPickedUp ? 'active' : 'done') : ''}">
+              <span>2</span> Picked Up
+            </div>
+            <div class="dt-step ${isInTransit || isDelivered ? (isInTransit ? 'active' : 'done') : ''}">
+              <span>3</span> In Transit
+            </div>
+            <div class="dt-step ${isDelivered ? 'done' : ''}">
+              <span>4</span> Delivered
+            </div>
           </div>
-          <div class="flex gap-2 flex-wrap">
-            ${canPickup ? `<button class="btn btn-primary btn-sm" onclick="markPickup('${d.id}')">📥 Mark Picked Up</button>` : ''}
-            ${canDeliver ? `<button class="btn btn-success btn-sm" onclick="markDelivered('${d.id}')">✅ Mark Delivered</button>` : ''}
-            ${canBreakdown ? `<button class="btn btn-danger btn-sm" onclick="openBreakdownModal('${d.id}')">🔧 Report Breakdown</button>` : ''}
+
+          <div class="grid-2 text-sm mb-3">
+            <div><span class="text-muted">Payload:</span> <strong>${d.quantity} ${d.unit || 'kg'}</strong></div>
+            <div><span class="text-muted">Destination Shelter:</span> 🏠 <strong>${d.shelter_name || 'Shelter'}</strong></div>
+            <div><span class="text-muted">Pickup Waypoint:</span> ${d.pickup_address || '—'}</div>
+            <div><span class="text-muted">Drop Waypoint:</span> ${d.shelter_address || '—'}</div>
+          </div>
+
+          <div class="flex gap-2 flex-wrap items-center mt-3">
+            ${canPickup ? `<button class="btn btn-primary btn-sm" onclick="markPickup('${d.id}')">📥 Mark Picked Up from Donor</button>` : ''}
+            ${canDeliver ? `<button class="btn btn-success btn-sm" onclick="markDelivered('${d.id}')">✅ Confirm Shelter Delivery</button>` : ''}
+            ${canBreakdown ? `<button class="btn btn-danger btn-sm" onclick="openBreakdownModal('${d.id}')">🚨 Report Breakdown & Handoff</button>` : ''}
+            ${isDelivered ? `<span class="badge badge-green">Mission Completed</span>` : ''}
           </div>
         </div>`;
     }).join('');
@@ -377,15 +712,16 @@
   async function markPickup(deliveryId) {
     try {
       await api.put(`/deliveries/${deliveryId}/pickup`);
-      toast('success', 'Marked as picked up!');
+      toast('success', 'Marked as picked up!', 'Transport status set to IN_TRANSIT.');
       loadMyDeliveries();
+      loadDashboard();
     } catch(ex) { toast('error', 'Failed', ex.message); }
   }
 
   async function markDelivered(deliveryId) {
     try {
       await api.put(`/deliveries/${deliveryId}/deliver`);
-      toast('success', 'Delivery complete! 🎉');
+      toast('success', 'Aid successfully delivered!', 'Receiving shelter updated and donation completed 🎉');
       loadMyDeliveries();
       loadDashboard();
     } catch(ex) { toast('error', 'Failed', ex.message); }
@@ -394,20 +730,39 @@
   function openBreakdownModal(deliveryId) {
     const overlay = openModal(`
       <div class="modal-header">
-        <div class="modal-title">🔧 Report Breakdown</div>
+        <div class="modal-title" style="color:var(--red); display:flex; align-items:center; gap:8px;">
+          <span>🚨</span> Report Breakdown & Request Rescue Rider
+        </div>
         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
       </div>
       <div class="modal-body">
-        <p class="text-secondary text-sm mb-4">Enter your current location. We'll find the nearest available rider to rescue your delivery.</p>
+        <p class="text-secondary text-sm mb-3">
+          If your vehicle has broken down or you cannot proceed, the AidSync engine will instantly locate the closest available rescue rider to complete the mission.
+        </p>
+
         <div class="grid-2">
-          <div class="form-group"><label class="form-label">Breakdown Latitude</label><input class="form-input" type="number" id="bd-lat" value="12.9716" step="0.0001" /></div>
-          <div class="form-group"><label class="form-label">Breakdown Longitude</label><input class="form-input" type="number" id="bd-lng" value="77.5946" step="0.0001" /></div>
+          <div class="form-group">
+            <label class="form-label">Breakdown Latitude</label>
+            <input class="form-input" type="number" id="bd-lat" value="12.9716" step="0.0001" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Breakdown Longitude</label>
+            <input class="form-input" type="number" id="bd-lng" value="77.5946" step="0.0001" />
+          </div>
         </div>
-        <div class="warning-quote"><span>⚠️</span><span>The aid will be preserved. A rescue rider will be dispatched to your location.</span></div>
+
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; margin-top:8px;">
+          <div style="font-size:0.78rem; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">⚖️ Pro-Rata Compensation Split System</div>
+          <div class="route-split-preview">
+            <div class="route-split-a" style="width:40%;">You (~40%)</div>
+            <div class="route-split-b" style="width:60%;">Rescue Rider (~60%)</div>
+          </div>
+          <div class="text-xs text-muted">Compensation and donor tip are split fairly according to GPS distance covered.</div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-        <button class="btn btn-danger" onclick="submitBreakdown('${deliveryId}', this.closest('.modal-overlay'))">Report Breakdown</button>
+        <button class="btn btn-danger" onclick="submitBreakdown('${deliveryId}', this.closest('.modal-overlay'))">Confirm Breakdown & Dispatch Rescue</button>
       </div>
     `);
   }
@@ -419,11 +774,12 @@
       const result = await api.put(`/deliveries/${deliveryId}/breakdown`, { lat, lng });
       closeModal(overlay);
       if (result.success) {
-        toast('success', 'Rescue rider assigned!', `Rider ${result.rescueRider?.name || ''} will continue delivery. Your share: ${Math.round(result.pctA * 100)}%`);
+        toast('success', 'Rescue rider dispatched!', `Assigned to ${result.rescueRider?.name || 'fleet rider'}. Your route share: ${Math.round(result.pctA * 100)}%`);
       } else {
-        toast('warning', 'Breakdown recorded', result.message || 'Admin notified.');
+        toast('warning', 'Breakdown logged', result.message || 'Admins and nearest riders alerted.');
       }
       loadMyDeliveries();
+      loadDashboard();
     } catch(ex) { toast('error', 'Failed', ex.message); }
   }
 
@@ -434,20 +790,27 @@
     try {
       await api.put(`/riders/${user.id}/status`, { status });
       updateStatusDisplay(status);
+      toast('info', `Status: ${status}`);
     } catch(ex) { toast('error', 'Status update failed', ex.message); }
   }
 
   function updateStatusDisplay(status) {
     const el = document.getElementById('rider-status-display');
     const map = {
-      AVAILABLE: { cls:'available', label:'🟢 Available' },
-      BUSY:      { cls:'busy',      label:'🟡 Busy'      },
-      OFFLINE:   { cls:'offline',   label:'⚫ Offline'   },
-      BREAKDOWN: { cls:'breakdown', label:'🔴 Breakdown' },
+      AVAILABLE: { cls:'available', label:'Online & Available' },
+      BUSY:      { cls:'busy',      label:'Busy on Route'     },
+      OFFLINE:   { cls:'offline',   label:'Offline'           },
+      BREAKDOWN: { cls:'breakdown', label:'Breakdown State'   },
     };
     const s = map[status] || map.OFFLINE;
     el.className = `status-pill ${s.cls}`;
-    el.textContent = s.label;
+    el.innerHTML = `<span class="status-pulse-dot"></span> ${s.label}`;
+  }
+
+  function setPresetLocation(lat, lng) {
+    document.getElementById('profile-lat').value = lat;
+    document.getElementById('profile-lng').value = lng;
+    toast('info', 'Coordinates set', `Lat: ${lat}, Lng: ${lng}`);
   }
 
   async function updateProfile(e) {
@@ -464,7 +827,7 @@
       });
       await api.put(`/riders/${user.id}/location`, { lat, lng });
       updateStatusDisplay(status);
-      toast('success', 'Profile updated!');
+      toast('success', 'Vehicle & GPS coordinates saved!');
     } catch(ex) { toast('error', 'Update failed', ex.message); }
   }
 
@@ -472,7 +835,7 @@
   function attachSocketEvents(sock) {
     sock.on('batch:available', (batch) => {
       loadAvailableBatches();
-      toast('info', '🏍️ New Batch Available!', `${batch?.quantity || ''} kg of ${batch?.aid_type || 'aid'} ready for pickup!`);
+      toast('info', '🏍️ New Batch Dispatched!', `${batch?.quantity || ''} ${batch?.unit || 'kg'} of ${batch?.aid_type || 'aid'} ready for pickup!`);
     });
 
     sock.on('batch:cancelled', () => {
@@ -480,7 +843,7 @@
     });
 
     sock.on('reservation:expired', ({ batchId }) => {
-      toast('warning', 'Reservation expired', `Batch ${batchId.slice(0,8)} released back to pool.`);
+      toast('warning', 'Reservation expired', `Batch ${batchId?.slice(0,8)} returned to fleet pool.`);
       loadAvailableBatches();
     });
 
@@ -489,22 +852,24 @@
       const detailEl = document.getElementById('rescue-details');
       alertEl.classList.remove('hidden');
       detailEl.innerHTML = `
-        <strong>Pickup Location:</strong> (${breakdownLat?.toFixed(4)}, ${breakdownLng?.toFixed(4)})<br/>
-        <strong>Your Route Share:</strong> ${Math.round(pctOfRoute * 100)}% of delivery<br/>
+        <strong>Handoff Waypoint:</strong> Coordinates (${breakdownLat?.toFixed(4)}, ${breakdownLng?.toFixed(4)})<br/>
+        <strong>Your Compensated Route Share:</strong> ${Math.round(pctOfRoute * 100)}% of total trip allowance<br/>
         <span class="text-muted">${message}</span>
       `;
-      toast('error', '🆘 Rescue Assignment!', message, 10000);
+      toast('error', '🆘 Rescue Mission Assigned!', message, 10000);
       loadMyDeliveries();
+      loadDashboard();
     });
 
     sock.on('delivery:rerouted', ({ deliveryId, newShelter }) => {
-      toast('warning', '🔄 Delivery rerouted!', `New destination: ${newShelter?.name || newShelter?.id}`);
+      toast('warning', '🔄 Delivery Rerouted!', `Destination shelter dynamically updated to: ${newShelter?.name || newShelter?.id}`);
       loadMyDeliveries();
     });
 
     sock.on('delivery:status_changed', () => {
       loadMyDeliveries();
       loadAvailableBatches();
+      loadDashboard();
     });
   }
 

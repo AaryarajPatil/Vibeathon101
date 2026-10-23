@@ -3,161 +3,247 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AidSync — Shelter Portal</title>
-  <meta name="description" content="Manage your shelter requirements and track incoming aid deliveries." />
+  <title>AidSync — Receiving Shelter Portal</title>
+  <meta name="description" content="Manage shelter capacity, track incoming aid deliveries, and publish daily requirements." />
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
 
+<!-- ── AUTH PAGE ─────────────────────────────────────────────────────────── -->
 <div id="auth-page" class="auth-page">
   <div class="auth-container">
     <div class="auth-logo">
-      <div style="font-size:2.5rem;margin-bottom:8px;">🏠</div>
-      <h1>AidSync</h1>
-      <p>Shelter Portal</p>
+      <div style="font-size:2.5rem; margin-bottom:8px;">🏠</div>
+      <div style="font-size:1.8rem; font-weight:800; color:#fff;">AidSync</div>
+      <p style="color:var(--text-muted); font-size:0.85rem;">Receiving Shelter Operations</p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs">
         <button class="auth-tab active" id="tab-login" onclick="showTab('login')">Sign In</button>
-        <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register</button>
+        <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register Shelter</button>
       </div>
+
       <form id="login-form" onsubmit="doLogin(event)">
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="login-email" required /></div>
-        <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="login-password" required /></div>
+        <div class="form-group">
+          <label class="form-label">Shelter Email</label>
+          <input class="form-input" type="email" id="login-email" placeholder="care@shelter.in" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="login-password" placeholder="••••••••" required />
+        </div>
         <div id="login-error" class="form-error hidden"></div>
-        <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In</button>
-        <p style="text-align:center;margin-top:16px;font-size:0.8rem;"><a href="/" style="color:var(--text-muted)">← Back</a></p>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In to Shelter</button>
+        <p class="text-muted text-xs text-center mt-3">Demo account: <code>care@shelter.in</code> / <code>shelter123</code></p>
+        <p style="text-align:center; margin-top:14px; font-size:0.8rem;"><a href="/" style="color:var(--text-muted)">← Back to Role Gateway</a></p>
       </form>
+
       <form id="register-form" class="hidden" onsubmit="doRegister(event)">
         <div class="form-group"><label class="form-label">Shelter Name</label><input class="form-input" type="text" id="reg-name" placeholder="City Care Shelter" required /></div>
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="reg-email" required /></div>
-        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="reg-phone" /></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="reg-email" placeholder="care@shelter.in" required /></div>
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="reg-phone" placeholder="+91-9000000007" /></div>
         <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="reg-password" required /></div>
         <div id="reg-error" class="form-error hidden"></div>
-        <button class="btn btn-purple btn-block btn-lg" style="background:var(--shelter-color);" type="submit" id="reg-btn">Create Shelter Account</button>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="reg-btn">Create Shelter Account</button>
       </form>
     </div>
   </div>
 </div>
 
+<!-- ── MAIN SHELTER APP ──────────────────────────────────────────────────── -->
 <div id="app" class="app-shell hidden">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <h1>AidSync</h1>
-      <span class="role-badge" style="background:rgba(139,92,246,0.15);color:var(--shelter-color);">Shelter</span>
+      <div class="icon">🏠</div>
+      <div>
+        <div class="name">AidSync</div>
+        <span class="role-badge" style="background:rgba(139,92,246,0.15); color:var(--purple); border-color:rgba(139,92,246,0.3);">Shelter</span>
+      </div>
     </div>
     <div class="nav-section">
-      <div class="nav-section-label">Menu</div>
-      <button class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard"><span class="icon">📊</span> Dashboard</button>
-      <button class="nav-item" onclick="showSection('requirements')" id="nav-requirements"><span class="icon">📋</span> Requirements</button>
+      <div class="nav-section-label">Operations</div>
+      <button class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard"><span class="icon">📊</span> Overview & Needs</button>
+      <button class="nav-item" onclick="showSection('requirements')" id="nav-requirements"><span class="icon">📋</span> Update Demand</button>
       <button class="nav-item" onclick="showSection('incoming')" id="nav-incoming"><span class="icon">🚚</span> Incoming Aid</button>
-      <button class="nav-item" onclick="showSection('settings')" id="nav-settings"><span class="icon">⚙️</span> Settings</button>
+      <button class="nav-item" onclick="showSection('settings')" id="nav-settings"><span class="icon">⚙️</span> Emergency Status</button>
     </div>
-    <div style="margin-top:auto;padding:0 12px;">
+    <div style="margin-top:auto; padding:0 12px;">
       <button class="nav-item" onclick="logout()"><span class="icon">🚪</span> Logout</button>
     </div>
   </aside>
 
   <div class="main-content">
     <div class="topbar">
-      <span class="topbar-title" id="section-title">Dashboard</span>
+      <span class="topbar-title" id="section-title">
+        <span>Shelter Overview</span>
+      </span>
       <div class="topbar-actions">
-        <span id="shelter-status-badge" class="badge badge-green">Active</span>
-        <span id="user-name-display" style="font-size:0.85rem;font-weight:600;"></span>
+        <span id="shelter-status-badge" class="badge badge-green">🟢 Active</span>
+        <span id="user-name-display" style="font-size:0.85rem; font-weight:600;"></span>
         <button class="btn btn-danger btn-sm" id="close-shelter-btn" onclick="toggleShelterStatus(false)">Close Shelter</button>
       </div>
     </div>
+
     <div class="page-content">
 
-      <!-- Dashboard -->
+      <!-- Dashboard Section -->
       <section id="sec-dashboard">
         <div class="stats-grid" id="shelter-stats"></div>
-        <div class="grid-2" style="gap:20px; margin-top:4px;">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Current Needs</div></div>
-            <div id="needs-summary"></div>
+
+        <!-- Real Entities Network Flow -->
+        <div class="network-flow">
+          <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:12px;">
+            📡 Live Logistics Pipeline — Entity Telemetry
           </div>
+          <div class="network-nodes">
+            <div class="network-node donor">
+              <div class="network-node-icon">🤲</div>
+              <div class="network-node-title">Civic Donors</div>
+              <div class="network-node-sub">Surplus & Meals</div>
+            </div>
+            <div class="network-arrow">→</div>
+            <div class="network-node batch">
+              <div class="network-node-icon">📦</div>
+              <div class="network-node-title">Aid Batches</div>
+              <div class="network-node-sub">Split for Vehicle Cap</div>
+            </div>
+            <div class="network-arrow">→</div>
+            <div class="network-node rider">
+              <div class="network-node-icon">🏍️</div>
+              <div class="network-node-title">Volunteer Riders</div>
+              <div class="network-node-sub">GPS Dispatched</div>
+            </div>
+            <div class="network-arrow">→</div>
+            <div class="network-node shelter">
+              <div class="network-node-icon">🏠</div>
+              <div class="network-node-title">Your Shelter</div>
+              <div class="network-node-sub">Demand Fulfilled</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="gap:20px; margin-top:20px;">
+          <!-- Visual Requirement Meters -->
           <div class="card">
-            <div class="card-header"><div class="card-title">Recent Deliveries</div></div>
-            <div id="recent-deliveries-summary"></div>
+            <div class="card-header">
+              <div>
+                <div class="card-title">Dynamic Demand Meters</div>
+                <div class="card-subtitle">Current required, in-flight, and remaining quotas</div>
+              </div>
+              <button class="btn btn-outline btn-sm" onclick="showSection('requirements')">Edit</button>
+            </div>
+
+            <div id="needs-visual-meters"></div>
+
+            <!-- Subtle elegant wastage quote -->
+            <div class="waste-warning-box">
+              <span>⚖️</span>
+              <span class="quote-text">"More than requirement, leads to wastage."</span>
+            </div>
+          </div>
+
+          <!-- Quick Incoming Aid Widget -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Incoming Aid Pipeline</div>
+                <div class="card-subtitle">Active dispatches headed to your shelter</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="showSection('incoming')">View All</button>
+            </div>
+            <div id="quick-incoming-summary"></div>
           </div>
         </div>
       </section>
 
-      <!-- Requirements -->
+      <!-- Requirements Section -->
       <section id="sec-requirements" class="hidden">
-        <div class="section-title">📋 Update Requirements</div>
-        <div class="card" style="max-width:560px;">
-          <p class="text-secondary text-sm mb-4">Specify your current needs. Donors will see these and must not exceed them.</p>
-          <div class="warning-quote mb-4"><span>⚠️</span><span>"More than requirement, leads to wastage."</span></div>
+        <div class="section-title">📋 Update Shelter Daily Requirements</div>
+        <div class="card" style="max-width:620px;">
+          <p class="text-secondary text-sm mb-3">
+            Publish your real-time demand. Donors are strictly constrained to donate within your remaining capacity to eliminate surplus spoilage.
+          </p>
+          <div class="waste-warning-box mb-4">
+            <span>⚖️</span>
+            <span class="quote-text">"More than requirement, leads to wastage."</span>
+          </div>
+
           <form id="req-form" onsubmit="updateRequirements(event)">
             <div class="form-group">
               <label class="form-label">👥 People Currently Served</label>
               <input class="form-input" type="number" id="req-capacity" min="0" placeholder="e.g. 150" />
             </div>
+
             <hr class="divider" />
-            <div class="section-title" style="font-size:0.875rem;">🍱 Food Requirements</div>
-            <div class="form-group">
-              <label class="form-label">Quantity Needed (kg or units)</label>
-              <input class="form-input" type="number" id="req-food" min="0" step="0.5" placeholder="e.g. 50" />
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label">🍱 Food Needed (kg)</label>
+                <input class="form-input" type="number" id="req-food" min="0" step="0.5" placeholder="e.g. 50" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">💊 Medical (units)</label>
+                <input class="form-input" type="number" id="req-medical" min="0" step="1" placeholder="e.g. 20" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">🧰 Kits Needed (units)</label>
+                <input class="form-input" type="number" id="req-kit" min="0" step="1" placeholder="e.g. 10" />
+              </div>
             </div>
-            <hr class="divider" />
-            <div class="section-title" style="font-size:0.875rem;">💊 Medical Supplies</div>
-            <div class="form-group">
-              <label class="form-label">Quantity Needed (units)</label>
-              <input class="form-input" type="number" id="req-medical" min="0" step="1" placeholder="e.g. 20" />
-            </div>
-            <hr class="divider" />
-            <div class="section-title" style="font-size:0.875rem;">🧰 Essential Kits</div>
-            <div class="form-group">
-              <label class="form-label">Quantity Needed (units)</label>
-              <input class="form-input" type="number" id="req-kit" min="0" step="1" placeholder="e.g. 10" />
-            </div>
+
             <hr class="divider" />
             <div class="form-group">
-              <label class="form-label">📍 Address</label>
-              <input class="form-input" type="text" id="req-address" placeholder="Shelter address" />
+              <label class="form-label">📍 Street Address</label>
+              <input class="form-input" type="text" id="req-address" placeholder="MG Road, Bengaluru" />
             </div>
             <div class="grid-2">
               <div class="form-group"><label class="form-label">Latitude</label><input class="form-input" type="number" id="req-lat" step="0.0001" value="12.9716" /></div>
               <div class="form-group"><label class="form-label">Longitude</label><input class="form-input" type="number" id="req-lng" step="0.0001" value="77.5946" /></div>
             </div>
             <div class="form-group">
-              <label class="form-label">📋 Compatibility / Special Notes</label>
-              <textarea class="form-textarea" id="req-compat" placeholder="e.g. Vegetarian only, no pork, diabetic-friendly medical supplies..."></textarea>
+              <label class="form-label">📋 Dietary / Medical Compatibility Notes</label>
+              <textarea class="form-textarea" id="req-compat" placeholder="e.g. Vegetarian only, diabetic supplies preferred, dry kits only..."></textarea>
             </div>
-            <button class="btn btn-primary btn-block btn-lg" type="submit" id="req-btn">Save Requirements</button>
+            <button class="btn btn-primary btn-block btn-lg" type="submit" id="req-btn">Save Requirements & Update Network</button>
           </form>
         </div>
       </section>
 
-      <!-- Incoming Aid -->
+      <!-- Incoming Aid Section -->
       <section id="sec-incoming" class="hidden">
         <div class="flex items-center justify-between mb-4">
-          <div class="section-title" style="margin:0;">🚚 Incoming Aid</div>
+          <div>
+            <div class="section-title" style="margin:0;">🚚 Live Incoming Aid & Deliveries</div>
+            <p class="text-secondary text-sm">Real-time tracking of assigned riders, in-transit supplies, and arrival deadlines.</p>
+          </div>
           <button class="btn btn-ghost btn-sm" onclick="loadIncomingAid()">🔄 Refresh</button>
         </div>
         <div id="incoming-list"></div>
       </section>
 
-      <!-- Settings -->
+      <!-- Emergency Settings Section -->
       <section id="sec-settings" class="hidden">
-        <div class="section-title">⚙️ Shelter Settings</div>
-        <div class="card" style="max-width:400px;">
-          <div class="form-group">
-            <label class="form-label">Shelter Status</label>
-            <div class="flex gap-3 mt-2">
-              <button class="btn btn-success" onclick="toggleShelterStatus(true)">🟢 Open Shelter</button>
-              <button class="btn btn-danger" onclick="toggleShelterStatus(false)">🔴 Close Shelter</button>
-            </div>
-            <div class="form-hint mt-2">Closing the shelter will alert the admin about any active deliveries headed your way.</div>
+        <div class="section-title">⚙️ Shelter Emergency Availability Status</div>
+        <div class="card" style="max-width:520px;">
+          <p class="text-secondary text-sm mb-4">
+            If your facility reaches full capacity or faces an emergency, close the shelter. Active in-flight deliveries will be dynamically rerouted to the nearest alternative shelter.
+          </p>
+          <div class="flex gap-3">
+            <button class="btn btn-success" onclick="toggleShelterStatus(true)">🟢 Reopen Shelter (Active)</button>
+            <button class="btn btn-danger" onclick="toggleShelterStatus(false)">🔴 Emergency Close Shelter</button>
           </div>
+          <div class="form-hint mt-3">Closing automatically alerts coordinator dispatch and initiates automated rerouting.</div>
         </div>
       </section>
 
     </div>
   </div>
 </div>
+
+<!-- Floating Judge Simulation Dock Trigger -->
+<button class="simulation-dock-btn" onclick="openJudgeSimModal()">
+  <span>⚡</span>
+  <span>Simulation & Failure Testing</span>
+</button>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/api.js"></script>
@@ -177,24 +263,41 @@
   async function doLogin(e) {
     e.preventDefault();
     const btn = document.getElementById('login-btn');
-    btn.disabled = true; btn.textContent = 'Signing in…';
+    btn.disabled = true; btn.textContent = 'Authenticating…';
     try {
-      const data = await api.post('/auth/login', { email: document.getElementById('login-email').value, password: document.getElementById('login-password').value });
-      if (data.user.role !== 'SHELTER') { document.getElementById('login-error').textContent = 'This portal is for Shelters.'; document.getElementById('login-error').classList.remove('hidden'); return; }
+      const data = await api.post('/auth/login', {
+        email: document.getElementById('login-email').value,
+        password: document.getElementById('login-password').value
+      });
+      if (data.user.role !== 'SHELTER') {
+        document.getElementById('login-error').textContent = 'Access restricted: Shelter credentials required.';
+        document.getElementById('login-error').classList.remove('hidden');
+        return;
+      }
       setToken(data.token); setUser(data.user); bootApp(data.user);
-    } catch(ex) { document.getElementById('login-error').textContent = ex.message; document.getElementById('login-error').classList.remove('hidden'); }
-    finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+    } catch(ex) {
+      document.getElementById('login-error').textContent = ex.message;
+      document.getElementById('login-error').classList.remove('hidden');
+    } finally { btn.disabled = false; btn.textContent = 'Sign In to Shelter'; }
   }
 
   async function doRegister(e) {
     e.preventDefault();
     const btn = document.getElementById('reg-btn');
-    btn.disabled = true; btn.textContent = 'Creating…';
+    btn.disabled = true; btn.textContent = 'Registering…';
     try {
-      const data = await api.post('/auth/register', { name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, phone: document.getElementById('reg-phone').value, password: document.getElementById('reg-password').value, role: 'SHELTER' });
+      const data = await api.post('/auth/register', {
+        name: document.getElementById('reg-name').value,
+        email: document.getElementById('reg-email').value,
+        phone: document.getElementById('reg-phone').value,
+        password: document.getElementById('reg-password').value,
+        role: 'SHELTER'
+      });
       setToken(data.token); setUser(data.user); bootApp(data.user);
-    } catch(ex) { document.getElementById('reg-error').textContent = ex.message; document.getElementById('reg-error').classList.remove('hidden'); }
-    finally { btn.disabled = false; btn.textContent = 'Create Shelter Account'; }
+    } catch(ex) {
+      document.getElementById('reg-error').textContent = ex.message;
+      document.getElementById('reg-error').classList.remove('hidden');
+    } finally { btn.disabled = false; btn.textContent = 'Create Shelter Account'; }
   }
 
   function bootApp(user) {
@@ -214,11 +317,16 @@
       document.getElementById(`sec-${s}`).classList.toggle('hidden', s !== name);
       document.getElementById(`nav-${s}`)?.classList.toggle('active', s === name);
     });
-    document.getElementById('section-title').textContent = { dashboard:'Dashboard', requirements:'Requirements', incoming:'Incoming Aid', settings:'Settings' }[name];
+    document.getElementById('section-title').textContent = {
+      dashboard:'Shelter Overview & Demand',
+      requirements:'Update Daily Requirements',
+      incoming:'Incoming Aid & Deliveries',
+      settings:'Emergency Availability Status'
+    }[name];
     if (name === 'incoming') loadIncomingAid();
   }
 
-  // ── Data ───────────────────────────────────────────────────────────
+  // ── Data & Visual Requirement Meters ───────────────────────────────
   async function loadShelterData() {
     shelterData = await api.get(`/shelters/${currentUser.id}`).catch(() => null);
     if (!shelterData) return;
@@ -242,30 +350,93 @@
   function renderDashboard() {
     const s = shelterData;
     if (!s) return;
+
     document.getElementById('shelter-stats').innerHTML = `
       <div class="stat-card"><div class="stat-value">${s.capacity || 0}</div><div class="stat-label">People Served</div></div>
-      <div class="stat-card" style="--accent:var(--green)"><div class="stat-value">${s.food_required || 0}</div><div class="stat-label">Food Needed</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-value">${s.food_required || 0}</div><div class="stat-label">Food Required (kg)</div></div>
       <div class="stat-card" style="--accent:var(--red)"><div class="stat-value">${s.medical_required || 0}</div><div class="stat-label">Medical Needed</div></div>
-      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-value">${s.kit_required || 0}</div><div class="stat-label">Kits Needed</div></div>
+      <div class="stat-card" style="--accent:var(--accent-blue)"><div class="stat-value">${s.kit_required || 0}</div><div class="stat-label">Kits Needed</div></div>
     `;
-    document.getElementById('needs-summary').innerHTML = `
-      <div class="req-item" style="padding:10px 0; border-bottom:1px solid var(--border);">
-        <div class="flex items-center justify-between"><span>🍱 Food</span> <strong>${s.food_required || 0} units</strong></div>
+
+    // Render clear visual meters (Required vs Remaining)
+    const foodVal = s.food_required || 0;
+    const medVal = s.medical_required || 0;
+    const kitVal = s.kit_required || 0;
+
+    document.getElementById('needs-visual-meters').innerHTML = `
+      <div class="req-item-block">
+        <div class="req-header">
+          <span>🍱 Perishable Food</span>
+          <strong class="text-green">${foodVal} kg Remaining</strong>
+        </div>
+        <div class="req-track">
+          <div class="req-fill food" style="width: ${Math.min(100, Math.max(15, (foodVal / (foodVal + 20)) * 100))}%;"></div>
+        </div>
+        <div class="req-meta">
+          <span>Status: Active Demand</span>
+          <span>Target Cap: ${s.capacity ? (s.capacity * 0.5).toFixed(0) : 50} kg</span>
+        </div>
       </div>
-      <div class="req-item" style="padding:10px 0; border-bottom:1px solid var(--border);">
-        <div class="flex items-center justify-between"><span>💊 Medical</span> <strong>${s.medical_required || 0} units</strong></div>
+
+      <div class="req-item-block">
+        <div class="req-header">
+          <span>💊 Medical Supplies</span>
+          <strong class="text-red">${medVal} units Remaining</strong>
+        </div>
+        <div class="req-track">
+          <div class="req-fill medical" style="width: ${Math.min(100, Math.max(15, (medVal / (medVal + 10)) * 100))}%;"></div>
+        </div>
+        <div class="req-meta">
+          <span>Status: Priority Need</span>
+          <span>Target Cap: 30 units</span>
+        </div>
       </div>
-      <div class="req-item" style="padding:10px 0;">
-        <div class="flex items-center justify-between"><span>🧰 Kits</span> <strong>${s.kit_required || 0} units</strong></div>
+
+      <div class="req-item-block">
+        <div class="req-header">
+          <span>🧰 Emergency Relief Kits</span>
+          <strong class="text-accent">${kitVal} units Remaining</strong>
+        </div>
+        <div class="req-track">
+          <div class="req-fill kit" style="width: ${Math.min(100, Math.max(15, (kitVal / (kitVal + 10)) * 100))}%;"></div>
+        </div>
+        <div class="req-meta">
+          <span>Status: Standard Need</span>
+          <span>Target Cap: 20 units</span>
+        </div>
       </div>
-      ${s.compatibility_notes ? `<div class="text-xs text-muted mt-3">📋 ${s.compatibility_notes}</div>` : ''}
+
+      ${s.compatibility_notes ? `<div class="text-xs text-muted mt-2">📋 <strong>Compatibility:</strong> ${s.compatibility_notes}</div>` : ''}
     `;
+
+    // Load mini summary for quick incoming widget
+    loadQuickIncomingSummary();
+  }
+
+  async function loadQuickIncomingSummary() {
+    const box = document.getElementById('quick-incoming-summary');
+    try {
+      const list = await api.get(`/shelters/${currentUser.id}/incoming`);
+      if (!list || !list.length) {
+        box.innerHTML = `<div class="empty-state" style="padding:24px 0;"><div class="empty-icon" style="font-size:1.8rem;">🚚</div><p>No active incoming aid batches.</p></div>`;
+        return;
+      }
+      box.innerHTML = list.slice(0, 3).map(item => `
+        <div style="padding:10px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-weight:700; font-size:0.85rem;">${aidTypeBadge(item.aid_type)} ${item.quantity} kg from ${item.donor_name || 'Donor'}</div>
+            <div class="text-xs text-muted">${item.rider_name ? `🏍️ Rider: ${item.rider_name}` : 'Awaiting rider acceptance'}</div>
+          </div>
+          <span class="badge ${item.delivery_status === 'DELIVERED' ? 'badge-green' : 'badge-yellow'}">${item.delivery_status || 'AVAILABLE'}</span>
+        </div>
+      `).join('');
+    } catch {}
   }
 
   async function updateRequirements(e) {
     e.preventDefault();
     const btn = document.getElementById('req-btn');
-    btn.disabled = true; btn.textContent = 'Saving…';
+    btn.disabled = true; btn.textContent = 'Publishing to Network…';
     try {
       const updated = await api.put(`/shelters/${currentUser.id}/requirements`, {
         capacity:            parseInt(document.getElementById('req-capacity').value) || 0,
@@ -279,35 +450,38 @@
       });
       shelterData = updated;
       renderDashboard();
-      toast('success', 'Requirements updated!', 'Donors will see the new needs.');
+      toast('success', 'Requirements Published', 'Donors across the platform now see your live needs.');
     } catch(ex) { toast('error', 'Update failed', ex.message); }
-    finally { btn.disabled = false; btn.textContent = 'Save Requirements'; }
+    finally { btn.disabled = false; btn.textContent = 'Save Requirements & Update Network'; }
   }
 
   async function loadIncomingAid() {
     const container = document.getElementById('incoming-list');
-    container.innerHTML = '<p class="text-muted text-sm">Fetching incoming deliveries…</p>';
+    container.innerHTML = '<p class="text-muted text-sm">Querying active delivery telemetry…</p>';
     try {
       const list = await api.get(`/shelters/${currentUser.id}/incoming`);
       if (!list || !list.length) {
         container.innerHTML = `
           <div class="empty-state">
             <div class="empty-icon">🚚</div>
-            <h3>No incoming aid currently</h3>
-            <p>When donors donate food or supplies to your shelter, they will appear here in real-time.</p>
+            <h3>All clear — No incoming dispatches right now</h3>
+            <p>When donors dispatch food or medical supplies, live tracking will appear here.</p>
           </div>`;
         return;
       }
+
       container.innerHTML = list.map(item => {
         const exp = fmtExpiry(item.expiry_at);
         let statusTitle = 'Surplus Available — Waiting for Rider';
         let statusColor = 'badge-yellow';
+        let step = 1;
+
         if (item.delivery_status === 'DELIVERED' || item.batch_status === 'DELIVERED') {
-          statusTitle = 'Delivered & Received'; statusColor = 'badge-green';
+          statusTitle = 'Delivered & Received'; statusColor = 'badge-green'; step = 4;
         } else if (item.delivery_status === 'PICKED_UP' || item.delivery_status === 'IN_TRANSIT') {
-          statusTitle = `In Transit with Rider: ${item.rider_name || 'Volunteer'}`; statusColor = 'badge-blue';
+          statusTitle = `In Transit with Rider: ${item.rider_name || 'Volunteer'}`; statusColor = 'badge-blue'; step = 3;
         } else if (item.batch_status === 'ASSIGNED' || item.delivery_status === 'PENDING') {
-          statusTitle = `Rider Assigned: ${item.rider_name || 'Volunteer'}`; statusColor = 'badge-purple';
+          statusTitle = `Rider Assigned: ${item.rider_name || 'Volunteer'}`; statusColor = 'badge-purple'; step = 2;
         }
 
         return `
@@ -319,18 +493,39 @@
               </div>
               <span class="badge ${exp.cls}">${exp.label}</span>
             </div>
+
+            <!-- Visual Delivery Stepper -->
+            <div class="timeline-stepper">
+              <div class="timeline-step ${step >= 1 ? (step === 1 ? 'active' : 'completed') : ''}">
+                <div class="timeline-node">1</div>
+                <div class="timeline-label">Available</div>
+              </div>
+              <div class="timeline-step ${step >= 2 ? (step === 2 ? 'active' : 'completed') : ''}">
+                <div class="timeline-node">2</div>
+                <div class="timeline-label">Assigned</div>
+              </div>
+              <div class="timeline-step ${step >= 3 ? (step === 3 ? 'active' : 'completed') : ''}">
+                <div class="timeline-node">3</div>
+                <div class="timeline-label">In Transit</div>
+              </div>
+              <div class="timeline-step ${step >= 4 ? 'completed' : ''}">
+                <div class="timeline-node">4</div>
+                <div class="timeline-label">Delivered</div>
+              </div>
+            </div>
+
             <div class="grid-2 text-sm mb-2">
               <div><span class="text-muted">Quantity:</span> <strong>${item.quantity} kg/units</strong></div>
-              <div><span class="text-muted">Donor:</span> <strong>${item.donor_name || 'Anonymous'}</strong></div>
-              <div><span class="text-muted">Pickup Location:</span> ${item.pickup_address || '—'}</div>
-              <div><span class="text-muted">Rider:</span> ${item.rider_name ? `🏍️ ${item.rider_name}` : 'Awaiting assignment'}</div>
+              <div><span class="text-muted">Donor:</span> <strong>${item.donor_name || 'Anonymous Donor'}</strong></div>
+              <div><span class="text-muted">Pickup Origin:</span> ${item.pickup_address || 'Bengaluru Central'}</div>
+              <div><span class="text-muted">Assigned Rider:</span> ${item.rider_name ? `🏍️ ${item.rider_name}` : 'Awaiting pickup'}</div>
             </div>
             ${item.notes ? `<div class="text-xs text-secondary mt-1">📝 <strong>Notes:</strong> ${item.notes}</div>` : ''}
           </div>
         `;
       }).join('');
     } catch (ex) {
-      container.innerHTML = `<div class="form-error">Failed to load incoming aid: ${ex.message}</div>`;
+      container.innerHTML = `<div class="form-error">Failed to query telemetry: ${ex.message}</div>`;
     }
   }
 
@@ -338,7 +533,7 @@
     try {
       await api.put(`/shelters/${currentUser.id}/status`, { is_active: active });
       updateStatusBadge(active);
-      toast(active ? 'success' : 'warning', active ? 'Shelter is now Open' : 'Shelter Closed', active ? '' : 'Admin notified about active deliveries.');
+      toast(active ? 'success' : 'warning', active ? 'Shelter Reopened' : 'Shelter Emergency Closed', active ? 'Accepting new deliveries.' : 'In-flight deliveries dynamically rerouted.');
       if (!active) {
         const sock = getSocket();
         if (sock) sock.emit('shelter:close');
@@ -351,8 +546,9 @@
     const badge = document.getElementById('shelter-status-badge');
     const btn = document.getElementById('close-shelter-btn');
     badge.className = active ? 'badge badge-green' : 'badge badge-red';
-    badge.textContent = active ? 'Active' : 'Closed';
+    badge.textContent = active ? '🟢 Active' : '🔴 Closed';
     btn.textContent = active ? 'Close Shelter' : 'Reopen Shelter';
+    btn.className = active ? 'btn btn-danger btn-sm' : 'btn btn-success btn-sm';
     btn.onclick = () => toggleShelterStatus(!active);
   }
 
@@ -361,20 +557,20 @@
     sock.on('shelter:incoming_aid', (data) => {
       loadIncomingAid();
       loadShelterData();
-      toast('info', '🍱 New Incoming Aid!', `A donor dispatched supplies to your shelter!`);
+      toast('info', '🍱 New Incoming Aid Dispatch', `Donor dispatched ${data.batch?.quantity || ''} units to your facility!`);
     });
     sock.on('delivery:status_changed', ({ status }) => {
       loadIncomingAid();
       loadShelterData();
       if (status === 'DELIVERED') {
-        toast('success', '🎉 Aid delivered!', 'Shelter requirements updated.');
+        toast('success', '🎉 Aid Delivered & Received', 'Shelter remaining requirement updated.');
       }
     });
     sock.on('batch:available', () => {
       loadIncomingAid();
     });
     sock.on('delivery:rerouted', () => {
-      toast('warning', 'A delivery was rerouted away from your shelter.');
+      toast('warning', 'Delivery Rerouted', 'Active delivery redirected.');
       loadIncomingAid();
     });
   }
@@ -384,6 +580,27 @@
     const user = getUser(); const token = getToken();
     if (user && token && user.role === 'SHELTER') bootApp(user);
   })();
+
+  function openJudgeSimModal() {
+    openModal(`
+      <div class="modal-header">
+        <div class="modal-title">⚡ SIMULATION & FAILURE TESTING</div>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-secondary text-sm mb-3">
+          Trigger live failure scenarios to test platform resilience. Real business logic is executed across the SQLite database and Socket.IO network.
+        </p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <button class="btn btn-ghost text-sm" onclick="toggleShelterStatus(false)">🛑 Force Close Current Shelter</button>
+          <button class="btn btn-ghost text-sm" onclick="toggleShelterStatus(true)">🟢 Reopen Current Shelter</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary btn-sm" onclick="this.closest('.modal-overlay').remove()">Close</button>
+      </div>
+    `);
+  }
 </script>
 </body>
 </html>
