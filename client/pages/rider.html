@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AidSync — Rider Portal</title>
+  <meta name="description" content="Accept and deliver aid batches, manage your status, and handle breakdowns." />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .batch-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:18px; margin-bottom:14px; transition:border-color .15s; }
+    .batch-card:hover { border-color:rgba(255,255,255,0.15); }
+    .countdown { font-size:0.85rem; font-weight:700; font-variant-numeric:tabular-nums; }
+    .status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-size:0.8rem; font-weight:600; }
+    .status-pill.available { background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); }
+    .status-pill.busy      { background:rgba(245,158,11,0.15); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); }
+    .status-pill.offline   { background:rgba(100,116,139,0.15); color:var(--text-muted); border:1px solid rgba(100,116,139,0.3); }
+    .status-pill.breakdown { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
+    .rescue-alert { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-md); padding:16px; margin-bottom:16px; animation: rescuePulse 1.5s infinite; }
+    @keyframes rescuePulse { 0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0.2); } 50% { box-shadow:0 0 0 8px rgba(239,68,68,0); } }
+  </style>
+</head>
+<body>
+
+<div id="auth-page" class="auth-page">
+  <div class="auth-container">
+    <div class="auth-logo">
+      <div style="font-size:2.5rem; margin-bottom:8px;">🏍️</div>
+      <h1>AidSync</h1>
+      <p>Rider Portal</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="showTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register</button>
+      </div>
+      <form id="login-form" onsubmit="doLogin(event)">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="login-email" required /></div>
+        <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="login-password" required /></div>
+        <div id="login-error" class="form-error hidden"></div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In</button>
+        <p style="text-align:center;margin-top:16px;font-size:0.8rem;"><a href="/" style="color:var(--text-muted)">← Back</a></p>
+      </form>
+      <form id="register-form" class="hidden" onsubmit="doRegister(event)">
+        <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" type="text" id="reg-name" required /></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="reg-email" required /></div>
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="reg-phone" /></div>
+        <div class="form-group"><label class="form-label">Vehicle Type</label>
+          <select class="form-select" id="reg-vehicle"><option value="BIKE">🏍️ Bike</option><option value="SCOOTER">🛵 Scooter</option><option value="CAR">🚗 Car</option><option value="CYCLE">🚲 Cycle</option></select></div>
+        <div class="form-group"><label class="form-label">Capacity (kg)</label><input class="form-input" type="number" id="reg-capacity" value="20" min="1" /></div>
+        <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="reg-password" required /></div>
+        <div id="reg-error" class="form-error hidden"></div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="reg-btn">Create Rider Account</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="app-shell hidden">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>AidSync</h1>
+      <span class="role-badge" style="background:rgba(59,130,246,0.15); color:var(--rider-color);">Rider</span>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Menu</div>
+      <button class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard"><span class="icon">📊</span> Dashboard</button>
+      <button class="nav-item" onclick="showSection('available')" id="nav-available"><span class="icon">📦</span> Available Batches</button>
+      <button class="nav-item" onclick="showSection('my-deliveries')" id="nav-my-deliveries"><span class="icon">🚚</span> My Deliveries</button>
+      <button class="nav-item" onclick="showSection('profile')" id="nav-profile"><span class="icon">👤</span> Profile & Status</button>
+    </div>
+    <div style="margin-top:auto;padding:0 12px;">
+      <button class="nav-item" onclick="logout()"><span class="icon">🚪</span> Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <span class="topbar-title" id="section-title">Dashboard</span>
+      <div class="topbar-actions">
+        <span id="rider-status-display" class="status-pill offline">⚫ Offline</span>
+        <span id="user-name-display" style="font-size:0.85rem;font-weight:600;"></span>
+      </div>
+    </div>
+    <div class="page-content">
+
+      <!-- Rescue Alert (shown when breakdown rescue assigned) -->
+      <div id="rescue-alert" class="rescue-alert hidden">
+        <div style="font-weight:700;color:var(--red);margin-bottom:6px;">🆘 Rescue Assignment!</div>
+        <div id="rescue-details" class="text-sm"></div>
+      </div>
+
+      <!-- Dashboard -->
+      <section id="sec-dashboard">
+        <div class="stats-grid" id="rider-stats"></div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Quick Actions</div></div>
+          <div class="flex gap-3 flex-wrap">
+            <button class="btn btn-success" onclick="setRiderStatus('AVAILABLE')">🟢 Go Online</button>
+            <button class="btn btn-ghost" onclick="setRiderStatus('OFFLINE')">⚫ Go Offline</button>
+            <button class="btn btn-primary" onclick="showSection('available')">📦 View Batches</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Available Batches -->
+      <section id="sec-available" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div class="section-title" style="margin:0;">📦 Available Batches</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAvailableBatches()">🔄 Refresh</button>
+        </div>
+        <div id="available-batches-list"></div>
+      </section>
+
+      <!-- My Deliveries -->
+      <section id="sec-my-deliveries" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div class="section-title" style="margin:0;">🚚 My Deliveries</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadMyDeliveries()">🔄 Refresh</button>
+        </div>
+        <div id="my-deliveries-list"></div>
+      </section>
+
+      <!-- Profile -->
+      <section id="sec-profile" class="hidden">
+        <div class="section-title">👤 Profile & Status</div>
+        <div class="card" style="max-width:480px;">
+          <form onsubmit="updateProfile(event)">
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-select" id="profile-status">
+                <option value="AVAILABLE">🟢 Available</option>
+                <option value="OFFLINE">⚫ Offline</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vehicle Type</label>
+              <select class="form-select" id="profile-vehicle">
+                <option value="BIKE">🏍️ Bike</option>
+                <option value="SCOOTER">🛵 Scooter</option>
+                <option value="CAR">🚗 Car</option>
+                <option value="CYCLE">🚲 Cycle</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Capacity (kg)</label>
+              <input class="form-input" type="number" id="profile-capacity" value="20" min="1" />
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Current Latitude</label>
+                <input class="form-input" type="number" id="profile-lat" value="12.9716" step="0.0001" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Current Longitude</label>
+                <input class="form-input" type="number" id="profile-lng" value="77.5946" step="0.0001" />
+              </div>
+            </div>
+            <button class="btn btn-primary btn-block" type="submit">Update Profile</button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/socket.js"></script>
+<script>
+  let currentUser = null;
+  let reservationTimers = {};
+
+  // ── Auth ───────────────────────────────────────────────────────────
+  function showTab(tab) {
+    ['login','register'].forEach(t => {
+      document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      document.getElementById(`${t}-form`).classList.toggle('hidden', t !== tab);
+    });
+  }
+
+  async function doLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+      const data = await api.post('/auth/login', {
+        email: document.getElementById('login-email').value,
+        password: document.getElementById('login-password').value
+      });
+      if (data.user.role !== 'RIDER') {
+        document.getElementById('login-error').textContent = 'This portal is for Riders only.';
+        document.getElementById('login-error').classList.remove('hidden'); return;
+      }
+      setToken(data.token); setUser(data.user);
+      bootApp(data.user);
+    } catch(ex) {
+      document.getElementById('login-error').textContent = ex.message;
+      document.getElementById('login-error').classList.remove('hidden');
+    } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+  }
+
+  async function doRegister(e) {
+    e.preventDefault();
+    const btn = document.getElementById('reg-btn');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      const data = await api.post('/auth/register', {
+        name: document.getElementById('reg-name').value,
+        email: document.getElementById('reg-email').value,
+        phone: document.getElementById('reg-phone').value,
+        password: document.getElementById('reg-password').value,
+        role: 'RIDER'
+      });
+      setToken(data.token); setUser(data.user);
+      bootApp(data.user);
+    } catch(ex) {
+      document.getElementById('reg-error').textContent = ex.message;
+      document.getElementById('reg-error').classList.remove('hidden');
+    } finally { btn.disabled = false; btn.textContent = 'Create Rider Account'; }
+  }
+
+  function bootApp(user) {
+    currentUser = user;
+    document.getElementById('auth-page').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('user-name-display').textContent = user.name;
+    loadDashboard();
+    const sock = initSocket(getToken());
+    attachSocketEvents(sock);
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────
+  const sections = ['dashboard','available','my-deliveries','profile'];
+  function showSection(name) {
+    sections.forEach(s => {
+      document.getElementById(`sec-${s}`).classList.toggle('hidden', s !== name);
+      document.getElementById(`nav-${s}`)?.classList.toggle('active', s === name);
+    });
+    document.getElementById('section-title').textContent = {
+      dashboard: 'Dashboard', available: 'Available Batches',
+      'my-deliveries': 'My Deliveries', profile: 'Profile & Status'
+    }[name];
+    if (name === 'available') loadAvailableBatches();
+    if (name === 'my-deliveries') loadMyDeliveries();
+  }
+
+  // ── Dashboard ──────────────────────────────────────────────────────
+  async function loadDashboard() {
+    const deliveries = await api.get('/deliveries').catch(() => []);
+    const done = deliveries.filter(d => d.status === 'DELIVERED').length;
+    const active = deliveries.filter(d => !['DELIVERED','FAILED'].includes(d.status)).length;
+    document.getElementById('rider-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-value">${done}</div><div class="stat-label">Delivered</div></div>
+      <div class="stat-card" style="--accent:var(--yellow)"><div class="stat-value">${active}</div><div class="stat-label">Active</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-value">${deliveries.length}</div><div class="stat-label">Total Trips</div></div>
+    `;
+  }
+
+  // ── Available Batches ──────────────────────────────────────────────
+  async function loadAvailableBatches() {
+    const batches = await api.get('/batches/available').catch(() => []);
+    const container = document.getElementById('available-batches-list');
+    if (!batches.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><h3>No batches available</h3><p>Check back soon or refresh.</p></div>`;
+      return;
+    }
+    container.innerHTML = batches.map(b => {
+      const exp = fmtExpiry(b.expiry_at);
+      return `
+        <div class="batch-card" id="batch-${b.id}">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">${aidTypeBadge(b.aid_type)} ${statusBadge(b.status)}</div>
+            <span class="badge ${exp.cls}">${exp.label}</span>
+          </div>
+          <div class="grid-2 text-sm mb-3">
+            <div><span class="text-muted">Qty:</span> <strong>${b.quantity} ${b.unit || 'kg'}</strong></div>
+            <div><span class="text-muted">From:</span> ${b.donor_name || '—'}</div>
+            <div><span class="text-muted">Pickup:</span> ${b.pickup_address || `(${b.pickup_lat?.toFixed(4)}, ${b.pickup_lng?.toFixed(4)})`}</div>
+            <div><span class="text-muted">Shelter:</span> ${b.shelter_name || '—'}</div>
+            <div><span class="text-muted">Drop:</span> ${b.shelter_address || '—'}</div>
+            <div><span class="text-muted">Notes:</span> ${b.notes || '—'}</div>
+          </div>
+          <div class="expiry-bar"><div class="expiry-bar-fill ${exp.mins < 15 ? 'urgent' : exp.mins < 30 ? 'warn' : 'safe'}" style="width:${exp.pct}%"></div></div>
+          <div class="flex gap-2 mt-3">
+            <button class="btn btn-primary btn-sm" onclick="reserveBatch('${b.id}')">🔒 Reserve</button>
+          </div>
+          <div id="res-timer-${b.id}" class="text-xs text-muted mt-2 hidden"></div>
+        </div>`;
+    }).join('');
+  }
+
+  async function reserveBatch(batchId) {
+    try {
+      await setRiderStatus('AVAILABLE'); // ensure online
+      const res = await api.post(`/batches/${batchId}/reserve`);
+      toast('info', 'Batch reserved!', `Confirm within ${res.ttl_seconds}s or it will auto-release.`);
+      startReservationCountdown(batchId, res.expires_at);
+      // Show confirm button
+      const card = document.getElementById(`batch-${batchId}`);
+      if (card) {
+        const btnRow = card.querySelector('.flex.gap-2.mt-3');
+        if (btnRow) btnRow.innerHTML = `
+          <button class="btn btn-success btn-sm" onclick="confirmBatch('${batchId}')">✅ Confirm Pickup</button>
+          <button class="btn btn-ghost btn-sm" onclick="releaseBatch('${batchId}')">Release</button>`;
+      }
+    } catch(ex) { toast('error', 'Reserve failed', ex.message); }
+  }
+
+  function startReservationCountdown(batchId, expiresAt) {
+    const timerEl = document.getElementById(`res-timer-${batchId}`);
+    if (timerEl) timerEl.classList.remove('hidden');
+
+    const interval = setInterval(() => {
+      const remaining = expiresAt - Math.floor(Date.now() / 1000);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        if (timerEl) timerEl.textContent = '⏰ Reservation expired';
+        loadAvailableBatches();
+        return;
+      }
+      if (timerEl) timerEl.innerHTML = `⏱ Reservation expires in: <strong class="countdown ${remaining < 60 ? 'text-red' : 'text-yellow'}">${remaining}s</strong>`;
+    }, 1000);
+    reservationTimers[batchId] = interval;
+  }
+
+  async function confirmBatch(batchId) {
+    try {
+      const delivery = await api.post(`/batches/${batchId}/confirm`);
+      if (reservationTimers[batchId]) { clearInterval(reservationTimers[batchId]); delete reservationTimers[batchId]; }
+      toast('success', 'Delivery created!', `Delivery ID: ${delivery.id.slice(0,8)}…`);
+      showSection('my-deliveries');
+    } catch(ex) { toast('error', 'Confirm failed', ex.message); }
+  }
+
+  async function releaseBatch(batchId) {
+    try {
+      await api.put(`/batches/${batchId}/release`);
+      if (reservationTimers[batchId]) { clearInterval(reservationTimers[batchId]); delete reservationTimers[batchId]; }
+      toast('info', 'Batch released');
+      loadAvailableBatches();
+    } catch(ex) { toast('error', 'Release failed', ex.message); }
+  }
+
+  // ── My Deliveries ──────────────────────────────────────────────────
+  async function loadMyDeliveries() {
+    const deliveries = await api.get('/deliveries').catch(() => []);
+    const container = document.getElementById('my-deliveries-list');
+    if (!deliveries.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🚚</div><h3>No deliveries yet</h3><p>Reserve a batch to get started.</p></div>`;
+      return;
+    }
+    container.innerHTML = deliveries.map(d => {
+      const canPickup = d.status === 'PENDING';
+      const canDeliver = d.status === 'PICKED_UP' || d.status === 'IN_TRANSIT' || d.status === 'REROUTED';
+      const canBreakdown = canDeliver;
+      return `
+        <div class="card mb-3">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex gap-2">${aidTypeBadge(d.aid_type)} ${statusBadge(d.status)}</div>
+            <span class="text-muted text-xs">${fmtTimeAgo(d.created_at)}</span>
+          </div>
+          <div class="grid-2 text-sm mb-3">
+            <div><span class="text-muted">Qty:</span> <strong>${d.quantity} ${d.unit || 'kg'}</strong></div>
+            <div><span class="text-muted">Shelter:</span> ${d.shelter_name || '—'}</div>
+            <div><span class="text-muted">Pickup:</span> ${d.pickup_address || '—'}</div>
+            <div><span class="text-muted">Drop:</span> ${d.shelter_address || '—'}</div>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            ${canPickup ? `<button class="btn btn-primary btn-sm" onclick="markPickup('${d.id}')">📥 Mark Picked Up</button>` : ''}
+            ${canDeliver ? `<button class="btn btn-success btn-sm" onclick="markDelivered('${d.id}')">✅ Mark Delivered</button>` : ''}
+            ${canBreakdown ? `<button class="btn btn-danger btn-sm" onclick="openBreakdownModal('${d.id}')">🔧 Report Breakdown</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function markPickup(deliveryId) {
+    try {
+      await api.put(`/deliveries/${deliveryId}/pickup`);
+      toast('success', 'Marked as picked up!');
+      loadMyDeliveries();
+    } catch(ex) { toast('error', 'Failed', ex.message); }
+  }
+
+  async function markDelivered(deliveryId) {
+    try {
+      await api.put(`/deliveries/${deliveryId}/deliver`);
+      toast('success', 'Delivery complete! 🎉');
+      loadMyDeliveries();
+      loadDashboard();
+    } catch(ex) { toast('error', 'Failed', ex.message); }
+  }
+
+  function openBreakdownModal(deliveryId) {
+    const overlay = openModal(`
+      <div class="modal-header">
+        <div class="modal-title">🔧 Report Breakdown</div>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-secondary text-sm mb-4">Enter your current location. We'll find the nearest available rider to rescue your delivery.</p>
+        <div class="grid-2">
+          <div class="form-group"><label class="form-label">Breakdown Latitude</label><input class="form-input" type="number" id="bd-lat" value="12.9716" step="0.0001" /></div>
+          <div class="form-group"><label class="form-label">Breakdown Longitude</label><input class="form-input" type="number" id="bd-lng" value="77.5946" step="0.0001" /></div>
+        </div>
+        <div class="warning-quote"><span>⚠️</span><span>The aid will be preserved. A rescue rider will be dispatched to your location.</span></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn btn-danger" onclick="submitBreakdown('${deliveryId}', this.closest('.modal-overlay'))">Report Breakdown</button>
+      </div>
+    `);
+  }
+
+  async function submitBreakdown(deliveryId, overlay) {
+    const lat = parseFloat(document.getElementById('bd-lat').value);
+    const lng = parseFloat(document.getElementById('bd-lng').value);
+    try {
+      const result = await api.put(`/deliveries/${deliveryId}/breakdown`, { lat, lng });
+      closeModal(overlay);
+      if (result.success) {
+        toast('success', 'Rescue rider assigned!', `Rider ${result.rescueRider?.name || ''} will continue delivery. Your share: ${Math.round(result.pctA * 100)}%`);
+      } else {
+        toast('warning', 'Breakdown recorded', result.message || 'Admin notified.');
+      }
+      loadMyDeliveries();
+    } catch(ex) { toast('error', 'Failed', ex.message); }
+  }
+
+  // ── Profile / Status ───────────────────────────────────────────────
+  async function setRiderStatus(status) {
+    const user = getUser();
+    if (!user) return;
+    try {
+      await api.put(`/riders/${user.id}/status`, { status });
+      updateStatusDisplay(status);
+    } catch(ex) { toast('error', 'Status update failed', ex.message); }
+  }
+
+  function updateStatusDisplay(status) {
+    const el = document.getElementById('rider-status-display');
+    const map = {
+      AVAILABLE: { cls:'available', label:'🟢 Available' },
+      BUSY:      { cls:'busy',      label:'🟡 Busy'      },
+      OFFLINE:   { cls:'offline',   label:'⚫ Offline'   },
+      BREAKDOWN: { cls:'breakdown', label:'🔴 Breakdown' },
+    };
+    const s = map[status] || map.OFFLINE;
+    el.className = `status-pill ${s.cls}`;
+    el.textContent = s.label;
+  }
+
+  async function updateProfile(e) {
+    e.preventDefault();
+    const user = getUser();
+    const lat = parseFloat(document.getElementById('profile-lat').value);
+    const lng = parseFloat(document.getElementById('profile-lng').value);
+    const status = document.getElementById('profile-status').value;
+    try {
+      await api.put(`/riders/${user.id}/status`, {
+        status,
+        capacity_kg: parseFloat(document.getElementById('profile-capacity').value),
+        vehicle_type: document.getElementById('profile-vehicle').value
+      });
+      await api.put(`/riders/${user.id}/location`, { lat, lng });
+      updateStatusDisplay(status);
+      toast('success', 'Profile updated!');
+    } catch(ex) { toast('error', 'Update failed', ex.message); }
+  }
+
+  // ── Socket Events ──────────────────────────────────────────────────
+  function attachSocketEvents(sock) {
+    sock.on('reservation:expired', ({ batchId }) => {
+      toast('warning', 'Reservation expired', `Batch ${batchId.slice(0,8)} released back to pool.`);
+      loadAvailableBatches();
+    });
+
+    sock.on('breakdown:rescue_assigned', ({ deliveryId, breakdownLat, breakdownLng, pctOfRoute, message }) => {
+      const alertEl = document.getElementById('rescue-alert');
+      const detailEl = document.getElementById('rescue-details');
+      alertEl.classList.remove('hidden');
+      detailEl.innerHTML = `
+        <strong>Pickup Location:</strong> (${breakdownLat?.toFixed(4)}, ${breakdownLng?.toFixed(4)})<br/>
+        <strong>Your Route Share:</strong> ${Math.round(pctOfRoute * 100)}% of delivery<br/>
+        <span class="text-muted">${message}</span>
+      `;
+      toast('error', '🆘 Rescue Assignment!', message, 10000);
+      loadMyDeliveries();
+    });
+
+    sock.on('delivery:rerouted', ({ deliveryId, newShelter }) => {
+      toast('warning', '🔄 Delivery rerouted!', `New destination: ${newShelter?.name || newShelter?.id}`);
+      loadMyDeliveries();
+    });
+
+    sock.on('delivery:status_changed', () => { loadMyDeliveries(); });
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────
+  (function init() {
+    const user = getUser();
+    const token = getToken();
+    if (user && token && user.role === 'RIDER') bootApp(user);
+  })();
+</script>
+</body>
+</html>

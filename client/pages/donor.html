@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AidSync — Donor Portal</title>
+  <meta name="description" content="Donate food, medical supplies, and essential kits to shelters in need." />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .shelter-req-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; transition:border-color .15s; }
+    .shelter-req-card:hover { border-color: rgba(255,255,255,0.15); }
+    .req-bar { display:flex; gap:12px; margin-top:10px; flex-wrap:wrap; }
+    .req-pill { background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:999px; padding:4px 12px; font-size:0.75rem; display:flex; align-items:center; gap:6px; }
+    .payment-methods { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+    .pay-method { border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 6px; text-align:center; cursor:pointer; transition:all .15s; background:none; }
+    .pay-method .pay-icon { font-size:1.4rem; display:block; margin-bottom:4px; }
+    .pay-method .pay-label { font-size:0.7rem; font-weight:600; color:var(--text-muted); }
+    .pay-method.selected { border-color:var(--accent); background:var(--accent-glow); }
+    .pay-method.selected .pay-label { color:var(--accent); }
+  </style>
+</head>
+<body>
+<div id="auth-page" class="auth-page">
+  <div class="auth-container">
+    <div class="auth-logo">
+      <div style="font-size:2.5rem; margin-bottom:8px;">🤲</div>
+      <h1>AidSync</h1>
+      <p>Donor Portal</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="showTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-register" onclick="showTab('register')">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" onsubmit="doLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="login-email" placeholder="donor@example.com" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="login-password" placeholder="••••••••" required />
+        </div>
+        <div id="login-error" class="form-error hidden"></div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In</button>
+        <p style="text-align:center; margin-top:16px; font-size:0.8rem; color:var(--text-muted);">
+          <a href="/" style="color:var(--text-muted)">← Back to roles</a>
+        </p>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="hidden" onsubmit="doRegister(event)">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" type="text" id="reg-name" placeholder="Priya Sharma" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="reg-email" placeholder="donor@example.com" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" type="tel" id="reg-phone" placeholder="+91 98765 43210" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" id="reg-password" placeholder="••••••••" required />
+        </div>
+        <div id="reg-error" class="form-error hidden"></div>
+        <button class="btn btn-success btn-block btn-lg" type="submit" id="reg-btn">Create Donor Account</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="app-shell hidden">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>AidSync</h1>
+      <span class="role-badge" style="background:rgba(16,185,129,0.15); color:var(--donor-color);">Donor</span>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Menu</div>
+      <button class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+        <span class="icon">📊</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="showSection('shelters')" id="nav-shelters">
+        <span class="icon">🏠</span> Shelter Needs
+      </button>
+      <button class="nav-item" onclick="showSection('donate')" id="nav-donate">
+        <span class="icon">➕</span> New Donation
+      </button>
+      <button class="nav-item" onclick="showSection('my-donations')" id="nav-my-donations">
+        <span class="icon">📦</span> My Donations
+      </button>
+    </div>
+    <div style="margin-top:auto; padding:0 12px;">
+      <button class="nav-item" onclick="logout()">
+        <span class="icon">🚪</span> Logout
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <span class="topbar-title" id="section-title">Dashboard</span>
+      <div class="topbar-actions">
+        <span class="live-dot"></span>
+        <span style="font-size:0.8rem; color:var(--text-muted);">Live</span>
+        <span id="user-name-display" style="font-size:0.85rem; font-weight:600;"></span>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- Dashboard -->
+      <section id="sec-dashboard">
+        <div class="stats-grid" id="donor-stats"></div>
+        <div class="card" id="recent-donations-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Recent Donations</div>
+              <div class="card-subtitle">Your last 5 donations</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showSection('donate')">+ Donate</button>
+          </div>
+          <div id="recent-donations-list"></div>
+        </div>
+      </section>
+
+      <!-- Shelter Needs -->
+      <section id="sec-shelters" class="hidden">
+        <div class="section-title">🏠 Current Shelter Requirements</div>
+        <p class="text-secondary text-sm mb-4">Browse active shelters and their current needs before donating.</p>
+        <div id="shelters-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;"></div>
+      </section>
+
+      <!-- New Donation -->
+      <section id="sec-donate" class="hidden">
+        <div class="section-title">➕ New Donation</div>
+        <div class="card" style="max-width:600px;">
+          <form id="donate-form" onsubmit="submitDonation(event)">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Aid Type</label>
+                <select class="form-select" id="d-aid-type" onchange="onAidTypeChange()" required>
+                  <option value="">Select type...</option>
+                  <option value="FOOD">🍱 Perishable Food</option>
+                  <option value="MEDICAL">💊 Medical Supplies</option>
+                  <option value="KIT">🧰 Essential Kit</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Target Shelter</label>
+                <select class="form-select" id="d-shelter" onchange="onShelterChange()" required>
+                  <option value="">Select shelter...</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Shelter requirement display -->
+            <div id="shelter-requirement-box" class="hidden" style="margin-bottom:16px;">
+              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px;">
+                <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Shelter currently needs:</div>
+                <div id="shelter-req-display" style="font-size:1.4rem; font-weight:800; color:var(--text-primary);"></div>
+                <div class="warning-quote">
+                  <span>⚠️</span>
+                  <span>"More than requirement, leads to wastage."</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Quantity</label>
+                <input class="form-input" type="number" id="d-quantity" placeholder="e.g. 10" min="0.1" step="0.1" required />
+                <div class="form-hint" id="d-qty-hint"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Unit</label>
+                <select class="form-select" id="d-unit">
+                  <option value="kg">kg</option>
+                  <option value="units">units</option>
+                  <option value="litres">litres</option>
+                  <option value="packs">packs</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Shelf Life / Expiry (minutes from now)</label>
+              <input class="form-input" type="number" id="d-expiry" value="120" min="15" required />
+              <div class="form-hint">Minimum 15 minutes. Food typically 60–180 min.</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Pickup Address</label>
+              <input class="form-input" type="text" id="d-address" placeholder="123 MG Road, Bengaluru" />
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Pickup Latitude</label>
+                <input class="form-input" type="number" id="d-lat" value="12.9716" step="0.0001" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Pickup Longitude</label>
+                <input class="form-input" type="number" id="d-lng" value="77.5946" step="0.0001" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Notes / Special Instructions</label>
+              <textarea class="form-textarea" id="d-notes" placeholder="e.g. Vegetarian, no nuts, kept at room temp..."></textarea>
+            </div>
+
+            <div id="donate-error" class="form-error hidden mb-3"></div>
+            <button class="btn btn-primary btn-block btn-lg" type="submit" id="donate-btn">🤲 Submit Donation</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- My Donations -->
+      <section id="sec-my-donations" class="hidden">
+        <div class="section-title">📦 My Donations</div>
+        <div id="my-donations-list"></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal Template (injected dynamically) -->
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/socket.js"></script>
+<script>
+  let currentUser = null;
+  let allShelters = [];
+  let selectedShelter = null;
+
+  // ── Auth ───────────────────────────────────────────────────────────
+  function showTab(tab) {
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+  }
+
+  async function doLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const err = document.getElementById('login-error');
+    err.classList.add('hidden');
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+      const data = await api.post('/auth/login', {
+        email: document.getElementById('login-email').value,
+        password: document.getElementById('login-password').value
+      });
+      if (data.user.role !== 'DONOR') { err.textContent = 'This portal is for Donors only.'; err.classList.remove('hidden'); return; }
+      setToken(data.token); setUser(data.user);
+      bootApp(data.user);
+    } catch(ex) {
+      err.textContent = ex.message || 'Login failed';
+      err.classList.remove('hidden');
+    } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+  }
+
+  async function doRegister(e) {
+    e.preventDefault();
+    const btn = document.getElementById('reg-btn');
+    const err = document.getElementById('reg-error');
+    err.classList.add('hidden');
+    btn.disabled = true; btn.textContent = 'Creating account…';
+    try {
+      const data = await api.post('/auth/register', {
+        name: document.getElementById('reg-name').value,
+        email: document.getElementById('reg-email').value,
+        phone: document.getElementById('reg-phone').value,
+        password: document.getElementById('reg-password').value,
+        role: 'DONOR'
+      });
+      setToken(data.token); setUser(data.user);
+      bootApp(data.user);
+    } catch(ex) {
+      err.textContent = ex.message || 'Registration failed';
+      err.classList.remove('hidden');
+    } finally { btn.disabled = false; btn.textContent = 'Create Donor Account'; }
+  }
+
+  function bootApp(user) {
+    currentUser = user;
+    document.getElementById('auth-page').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('user-name-display').textContent = user.name;
+    loadDashboard();
+    loadShelters();
+    initSocket(getToken());
+    attachSocketEvents();
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────
+  const sections = ['dashboard','shelters','donate','my-donations'];
+  function showSection(name) {
+    sections.forEach(s => {
+      document.getElementById(`sec-${s}`).classList.toggle('hidden', s !== name);
+      document.getElementById(`nav-${s}`)?.classList.toggle('active', s === name);
+    });
+    document.getElementById('section-title').textContent = {
+      dashboard: 'Dashboard', shelters: 'Shelter Needs', donate: 'New Donation', 'my-donations': 'My Donations'
+    }[name];
+    if (name === 'my-donations') loadMyDonations();
+    if (name === 'shelters') renderShelters();
+  }
+
+  // ── Dashboard ──────────────────────────────────────────────────────
+  async function loadDashboard() {
+    const donations = await api.get('/donations').catch(() => []);
+    const total = donations.length;
+    const delivered = donations.filter(d => d.status === 'DELIVERED').length;
+    const active = donations.filter(d => ['PENDING','MATCHED','IN_TRANSIT'].includes(d.status)).length;
+
+    document.getElementById('donor-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total Donations</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-value">${delivered}</div><div class="stat-label">Delivered</div></div>
+      <div class="stat-card" style="--accent:var(--yellow)"><div class="stat-value">${active}</div><div class="stat-label">In Progress</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-value">${allShelters.length}</div><div class="stat-label">Active Shelters</div></div>
+    `;
+    renderRecentDonations(donations.slice(0,5));
+  }
+
+  function renderRecentDonations(donations) {
+    const container = document.getElementById('recent-donations-list');
+    if (!donations.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h3>No donations yet</h3><p>Click "New Donation" to start.</p></div>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Type</th><th>Quantity</th><th>Status</th><th>Expiry</th><th>Created</th></tr></thead>
+          <tbody>${donations.map(d => {
+            const exp = fmtExpiry(d.expiry_at);
+            return `<tr>
+              <td>${aidTypeBadge(d.aid_type)}</td>
+              <td>${d.quantity} ${d.unit}</td>
+              <td>${statusBadge(d.status)}</td>
+              <td><span class="badge ${exp.cls}">${exp.label}</span></td>
+              <td class="text-muted text-xs">${fmtTimeAgo(d.created_at)}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // ── Shelters ───────────────────────────────────────────────────────
+  async function loadShelters() {
+    allShelters = await api.get('/shelters').catch(() => []);
+    populateShelterDropdown();
+    renderShelters();
+  }
+
+  function populateShelterDropdown() {
+    const sel = document.getElementById('d-shelter');
+    sel.innerHTML = '<option value="">Select shelter...</option>' +
+      allShelters.map(s => `<option value="${s.id}">${s.name} — ${s.address || 'No address'}</option>`).join('');
+  }
+
+  function renderShelters() {
+    const grid = document.getElementById('shelters-grid');
+    if (!allShelters.length) {
+      grid.innerHTML = '<p class="text-muted">No active shelters.</p>'; return;
+    }
+    grid.innerHTML = allShelters.map(s => `
+      <div class="shelter-req-card">
+        <div class="flex items-center justify-between mb-2">
+          <div style="font-weight:700;">${s.name}</div>
+          <span class="badge badge-green">Active</span>
+        </div>
+        <div class="text-secondary text-sm mb-2">${s.address || '—'} &nbsp;|&nbsp; 👥 ${s.capacity || 0} people</div>
+        <div class="req-bar">
+          <div class="req-pill"><span>🍱</span> <strong>${s.food_required}</strong> food needed</div>
+          <div class="req-pill"><span>💊</span> <strong>${s.medical_required}</strong> medical</div>
+          <div class="req-pill"><span>🧰</span> <strong>${s.kit_required}</strong> kits</div>
+        </div>
+        ${s.compatibility_notes ? `<div class="text-xs text-muted mt-2">📋 ${s.compatibility_notes}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function onAidTypeChange() { onShelterChange(); }
+
+  function onShelterChange() {
+    const sid = document.getElementById('d-shelter').value;
+    const aidType = document.getElementById('d-aid-type').value;
+    const box = document.getElementById('shelter-requirement-box');
+    if (!sid || !aidType) { box.classList.add('hidden'); selectedShelter = null; return; }
+
+    selectedShelter = allShelters.find(s => s.id === sid);
+    if (!selectedShelter) return;
+
+    const fieldMap = { FOOD: 'food_required', MEDICAL: 'medical_required', KIT: 'kit_required' };
+    const req = selectedShelter[fieldMap[aidType]] || 0;
+    document.getElementById('shelter-req-display').textContent = `${req} units`;
+    document.getElementById('d-qty-hint').textContent = `Max you can donate: ${req} units`;
+    box.classList.remove('hidden');
+  }
+
+  async function submitDonation(e) {
+    e.preventDefault();
+    const btn = document.getElementById('donate-btn');
+    const err = document.getElementById('donate-error');
+    err.classList.add('hidden');
+    btn.disabled = true; btn.textContent = 'Submitting…';
+
+    try {
+      const donation = await api.post('/donations', {
+        aid_type:       document.getElementById('d-aid-type').value,
+        quantity:       parseFloat(document.getElementById('d-quantity').value),
+        unit:           document.getElementById('d-unit').value,
+        expiry_minutes: parseInt(document.getElementById('d-expiry').value),
+        notes:          document.getElementById('d-notes').value,
+        pickup_address: document.getElementById('d-address').value,
+        pickup_lat:     parseFloat(document.getElementById('d-lat').value),
+        pickup_lng:     parseFloat(document.getElementById('d-lng').value),
+        shelter_id:     document.getElementById('d-shelter').value || undefined,
+      });
+      toast('success', 'Donation submitted!', `ID: ${donation.id.slice(0,8)}… — awaiting match.`);
+      e.target.reset();
+      document.getElementById('shelter-requirement-box').classList.add('hidden');
+      showSection('my-donations');
+    } catch(ex) {
+      err.textContent = ex.message;
+      err.classList.remove('hidden');
+    } finally { btn.disabled = false; btn.textContent = '🤲 Submit Donation'; }
+  }
+
+  // ── My Donations ───────────────────────────────────────────────────
+  async function loadMyDonations() {
+    const donations = await api.get('/donations').catch(() => []);
+    const container = document.getElementById('my-donations-list');
+    if (!donations.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h3>No donations yet</h3><p>Head to "New Donation" to get started.</p></div>`;
+      return;
+    }
+    container.innerHTML = donations.map(d => {
+      const exp = fmtExpiry(d.expiry_at);
+      const canPay = d.status === 'DELIVERED';
+      return `
+        <div class="card mb-3">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              ${aidTypeBadge(d.aid_type)}
+              ${statusBadge(d.status)}
+            </div>
+            <span class="text-muted text-xs">${fmtTimeAgo(d.created_at)}</span>
+          </div>
+          <div class="grid-2 text-sm mb-3">
+            <div><span class="text-muted">Quantity:</span> <strong>${d.quantity} ${d.unit}</strong></div>
+            <div><span class="text-muted">Expiry:</span> <span class="badge ${exp.cls}">${exp.label}</span></div>
+            <div><span class="text-muted">Pickup:</span> ${d.pickup_address || '—'}</div>
+            <div><span class="text-muted">Donor name:</span> ${d.donor_name || '—'}</div>
+          </div>
+          <div class="expiry-bar"><div class="expiry-bar-fill ${exp.mins < 15 ? 'urgent' : exp.mins < 30 ? 'warn' : 'safe'}" style="width:${exp.pct}%"></div></div>
+          <div class="flex gap-2 mt-3">
+            ${canPay ? `<button class="btn btn-primary btn-sm" onclick="openPaymentModal('${d.id}')">💳 Pay & Tip Rider</button>` : ''}
+            ${['PENDING','MATCHED'].includes(d.status) ? `<button class="btn btn-danger btn-sm" onclick="cancelDonation('${d.id}')">Cancel</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function cancelDonation(id) {
+    if (!confirm('Cancel this donation?')) return;
+    try {
+      await api.put(`/donations/${id}/cancel`);
+      toast('success', 'Donation cancelled');
+      loadMyDonations();
+    } catch(ex) { toast('error', 'Failed', ex.message); }
+  }
+
+  // ── Payment Modal ──────────────────────────────────────────────────
+  let paymentOverlay = null;
+  let selectedPayMethod = 'UPI';
+  let pendingPaymentId = null;
+
+  async function openPaymentModal(donationId) {
+    // Find delivery for this donation
+    let delivery;
+    try {
+      const donation = await api.get(`/donations/${donationId}`);
+      const batch = donation.batches?.[0];
+      if (!batch) { toast('error','No batch found'); return; }
+      const deliveries = await api.get('/deliveries').catch(() => []);
+      delivery = deliveries.find(d => d.batch_id === batch.id && d.status === 'DELIVERED');
+    } catch {}
+    if (!delivery) { toast('error','No completed delivery found for this donation'); return; }
+
+    paymentOverlay = openModal(`
+      <div class="modal-header">
+        <div class="modal-title">💳 Payment & Tip</div>
+        <button class="modal-close" onclick="closeModal(paymentOverlay)">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Delivery Amount (₹)</label>
+          <input class="form-input" type="number" id="pay-amount" value="50" min="0" step="1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tip for Rider (optional) (₹)</label>
+          <input class="form-input" type="number" id="pay-tip" value="0" min="0" step="1" />
+          <div class="form-hint">Tip is split proportionally among all riders who contributed.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Method</label>
+          <div class="payment-methods">
+            <button class="pay-method selected" onclick="selectPayMethod('UPI',this)" id="pm-UPI">
+              <span class="pay-icon">📱</span><span class="pay-label">UPI</span>
+            </button>
+            <button class="pay-method" onclick="selectPayMethod('CARD',this)" id="pm-CARD">
+              <span class="pay-icon">💳</span><span class="pay-label">Card</span>
+            </button>
+            <button class="pay-method" onclick="selectPayMethod('NETBANKING',this)" id="pm-NETBANKING">
+              <span class="pay-icon">🏦</span><span class="pay-label">Net Banking</span>
+            </button>
+            <button class="pay-method" onclick="selectPayMethod('WALLET',this)" id="pm-WALLET">
+              <span class="pay-icon">👜</span><span class="pay-label">Wallet</span>
+            </button>
+            <button class="pay-method" onclick="selectPayMethod('COD',this)" id="pm-COD">
+              <span class="pay-icon">💵</span><span class="pay-label">COD</span>
+            </button>
+          </div>
+        </div>
+        <p class="text-muted text-xs mt-2">⚡ This is a simulated payment — no real transaction will occur.</p>
+        <div id="pay-error" class="form-error hidden mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal(paymentOverlay)">Cancel</button>
+        <button class="btn btn-success" onclick="simulatePayment('${delivery.id}')">Pay Now</button>
+        <button class="btn btn-danger" onclick="simulateFail('${delivery.id}')">Simulate Fail</button>
+      </div>
+    `);
+  }
+
+  function selectPayMethod(method, btn) {
+    selectedPayMethod = method;
+    document.querySelectorAll('.pay-method').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+
+  async function simulatePayment(deliveryId, outcome = 'success') {
+    const amount = parseFloat(document.getElementById('pay-amount')?.value || 50);
+    const tip = parseFloat(document.getElementById('pay-tip')?.value || 0);
+    const errEl = document.getElementById('pay-error');
+    errEl?.classList.add('hidden');
+
+    try {
+      const payment = await api.post('/payments/initiate', {
+        delivery_id: deliveryId, amount, tip_amount: tip, method: selectedPayMethod
+      });
+      pendingPaymentId = payment.payment_id;
+
+      if (selectedPayMethod === 'CARD') {
+        toast('info', 'Processing card…', 'Simulating 3-second delay.');
+        await new Promise(r => setTimeout(r, 3000));
+      }
+
+      const result = await api.post('/payments/simulate', {
+        payment_id: pendingPaymentId, outcome
+      });
+
+      closeModal(paymentOverlay);
+      if (outcome === 'success') {
+        showCompensationToast(result.compensation);
+        toast('success', 'Payment successful!', `₹${amount} paid via ${selectedPayMethod}`);
+      } else {
+        toast('error', 'Payment failed', 'Simulation returned failure.');
+      }
+      loadMyDonations();
+    } catch(ex) {
+      if (errEl) { errEl.textContent = ex.message; errEl.classList.remove('hidden'); }
+      else toast('error', 'Payment error', ex.message);
+    }
+  }
+
+  function simulateFail(deliveryId) { simulatePayment(deliveryId, 'fail'); }
+
+  function showCompensationToast(comp) {
+    if (!comp || !comp.length) return;
+    const lines = comp.map(c => `Rider: ${Math.round(c.pct_share*100)}% → ₹${c.total.toFixed(2)}`).join(' | ');
+    toast('info', 'Rider Compensation Allocated', lines, 7000);
+  }
+
+  // ── Socket Events ──────────────────────────────────────────────────
+  function attachSocketEvents() {
+    const sock = getSocket();
+    sock.on('donation:expiry_warning', ({ donationId, minutesLeft, aidType }) => {
+      toast('warning', '⏰ Expiry Warning', `${aidType} donation expires in ${minutesLeft} min!`, 8000);
+    });
+    sock.on('payment:confirmed', ({ paymentId, status }) => {
+      if (status === 'SIMULATED_SUCCESS') toast('success', 'Payment confirmed', paymentId);
+    });
+    sock.on('delivery:status_changed', () => { loadDashboard(); });
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────
+  (function init() {
+    const user = getUser();
+    const token = getToken();
+    if (user && token && user.role === 'DONOR') {
+      bootApp(user);
+    }
+  })();
+</script>
+</body>
+</html>

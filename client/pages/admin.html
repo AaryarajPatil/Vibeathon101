@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AidSync — Admin Dashboard</title>
+  <meta name="description" content="Coordinator dashboard: match donations, manage deliveries, handle incidents, monitor live operations." />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .alert-item { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 16px; margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; }
+    .alert-item.unresolved { border-left:3px solid var(--red); }
+    .alert-item.resolved   { border-left:3px solid var(--green); opacity:0.6; }
+    .alert-type { font-size:0.7rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:2px; }
+    .alert-msg  { font-size:0.85rem; color:var(--text-secondary); }
+    .live-stream { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; height:260px; overflow-y:auto; font-size:0.8rem; font-family:monospace; }
+    .log-entry { padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text-secondary); }
+    .log-entry.warn { color:var(--yellow); }
+    .log-entry.error { color:var(--red); }
+    .log-entry.success { color:var(--green); }
+    .log-entry.info { color:var(--accent); }
+  </style>
+</head>
+<body>
+
+<div id="auth-page" class="auth-page">
+  <div class="auth-container">
+    <div class="auth-logo">
+      <div style="font-size:2.5rem;margin-bottom:8px;">🎛️</div>
+      <h1>AidSync</h1>
+      <p>Coordinator Dashboard</p>
+    </div>
+    <div class="auth-card">
+      <form id="login-form" onsubmit="doLogin(event)">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="login-email" required /></div>
+        <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" id="login-password" required /></div>
+        <div id="login-error" class="form-error hidden"></div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="login-btn">Sign In as Admin</button>
+        <p style="text-align:center;margin-top:16px;font-size:0.8rem;"><a href="/" style="color:var(--text-muted)">← Back</a></p>
+        <p class="text-muted text-xs" style="text-align:center;margin-top:8px;">Register an ADMIN account via API or seed script.</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="app-shell hidden">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>AidSync</h1>
+      <span class="role-badge" style="background:rgba(249,115,22,0.15);color:var(--admin-color);">Admin</span>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Operations</div>
+      <button class="nav-item active" onclick="showSection('overview')" id="nav-overview"><span class="icon">📊</span> Overview</button>
+      <button class="nav-item" onclick="showSection('matching')" id="nav-matching"><span class="icon">🔗</span> Matching</button>
+      <button class="nav-item" onclick="showSection('deliveries')" id="nav-deliveries"><span class="icon">🚚</span> Deliveries</button>
+      <button class="nav-item" onclick="showSection('riders')" id="nav-riders"><span class="icon">🏍️</span> Riders</button>
+      <button class="nav-item" onclick="showSection('shelters')" id="nav-shelters"><span class="icon">🏠</span> Shelters</button>
+      <button class="nav-item" onclick="showSection('alerts')" id="nav-alerts"><span class="icon">🚨</span> Alerts <span id="alert-badge" class="badge badge-red hidden" style="margin-left:auto;"></span></button>
+      <button class="nav-item" onclick="showSection('live')" id="nav-live"><span class="icon">📡</span> Live Feed</button>
+    </div>
+    <div style="margin-top:auto;padding:0 12px;">
+      <button class="nav-item" onclick="logout()"><span class="icon">🚪</span> Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <span class="topbar-title" id="section-title">Overview</span>
+      <div class="topbar-actions">
+        <span class="live-dot"></span>
+        <span style="font-size:0.8rem;color:var(--text-muted);">Live</span>
+        <button class="btn btn-primary btn-sm" onclick="triggerMatch()">⚡ Run Match</button>
+        <span id="user-name-display" style="font-size:0.85rem;font-weight:600;"></span>
+      </div>
+    </div>
+    <div class="page-content">
+
+      <!-- Overview -->
+      <section id="sec-overview">
+        <div class="stats-grid" id="admin-stats"></div>
+        <div class="grid-2" style="gap:20px;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Live Feed</div><div class="card-subtitle">Real-time events</div></div>
+            <div class="live-stream" id="mini-log"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Critical Alerts</div></div>
+            <div id="mini-alerts"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Matching -->
+      <section id="sec-matching" class="hidden">
+        <div class="section-title">🔗 Smart Matching</div>
+        <div class="flex gap-3 mb-4 flex-wrap">
+          <button class="btn btn-primary" onclick="triggerMatch()">⚡ Run Auto-Match for All Pending</button>
+          <button class="btn btn-ghost" onclick="loadMatchSuggestions()">👁 Preview Suggestions</button>
+        </div>
+        <div id="match-result" class="card mb-4 hidden">
+          <div class="card-title mb-2">Match Results</div>
+          <div id="match-result-body"></div>
+        </div>
+        <div id="match-suggestions"></div>
+      </section>
+
+      <!-- Deliveries -->
+      <section id="sec-deliveries" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div class="section-title" style="margin:0;">🚚 All Deliveries</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadDeliveries()">🔄 Refresh</button>
+        </div>
+        <div id="deliveries-list"></div>
+      </section>
+
+      <!-- Riders -->
+      <section id="sec-riders" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div class="section-title" style="margin:0;">🏍️ All Riders</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadRiders()">🔄 Refresh</button>
+        </div>
+        <div id="riders-list"></div>
+      </section>
+
+      <!-- Shelters -->
+      <section id="sec-shelters" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div class="section-title" style="margin:0;">🏠 All Shelters</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadShelters()">🔄 Refresh</button>
+        </div>
+        <div id="shelters-list"></div>
+      </section>
+
+      <!-- Alerts -->
+      <section id="sec-alerts" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div class="section-title" style="margin:0;">🚨 Alerts</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAlerts()">🔄 Refresh</button>
+        </div>
+        <div id="alerts-list"></div>
+      </section>
+
+      <!-- Live Feed -->
+      <section id="sec-live" class="hidden">
+        <div class="section-title">📡 Live Event Feed</div>
+        <div class="live-stream" id="main-log" style="height:500px;"></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/socket.js"></script>
+<script>
+  let currentUser = null;
+  let logEntries = [];
+
+  // ── Auth ───────────────────────────────────────────────────────────
+  async function doLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+      const data = await api.post('/auth/login', { email: document.getElementById('login-email').value, password: document.getElementById('login-password').value });
+      if (data.user.role !== 'ADMIN') { document.getElementById('login-error').textContent = 'Admin access required.'; document.getElementById('login-error').classList.remove('hidden'); return; }
+      setToken(data.token); setUser(data.user); bootApp(data.user);
+    } catch(ex) { document.getElementById('login-error').textContent = ex.message; document.getElementById('login-error').classList.remove('hidden'); }
+    finally { btn.disabled = false; btn.textContent = 'Sign In as Admin'; }
+  }
+
+  function bootApp(user) {
+    currentUser = user;
+    document.getElementById('auth-page').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('user-name-display').textContent = user.name;
+    loadOverview();
+    const sock = initSocket(getToken());
+    attachSocketEvents(sock);
+    // Auto-refresh overview every 15s
+    setInterval(loadOverview, 15000);
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────
+  const sections = ['overview','matching','deliveries','riders','shelters','alerts','live'];
+  function showSection(name) {
+    sections.forEach(s => {
+      document.getElementById(`sec-${s}`).classList.toggle('hidden', s !== name);
+      document.getElementById(`nav-${s}`)?.classList.toggle('active', s === name);
+    });
+    document.getElementById('section-title').textContent = {
+      overview:'Overview', matching:'Smart Matching', deliveries:'Deliveries',
+      riders:'Riders', shelters:'Shelters', alerts:'Alerts', live:'Live Feed'
+    }[name];
+    if (name === 'deliveries') loadDeliveries();
+    if (name === 'riders') loadRiders();
+    if (name === 'shelters') loadShelters();
+    if (name === 'alerts') loadAlerts();
+  }
+
+  // ── Overview ───────────────────────────────────────────────────────
+  async function loadOverview() {
+    const stats = await api.get('/admin/dashboard').catch(() => ({}));
+    document.getElementById('admin-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-value">${stats.donations || 0}</div><div class="stat-label">Total Donations</div></div>
+      <div class="stat-card" style="--accent:var(--yellow)"><div class="stat-value">${stats.pending_donations || 0}</div><div class="stat-label">Pending Match</div></div>
+      <div class="stat-card" style="--accent:var(--teal)"><div class="stat-value">${stats.deliveries_active || 0}</div><div class="stat-label">Active Deliveries</div></div>
+      <div class="stat-card" style="--accent:var(--green)"><div class="stat-value">${stats.deliveries_done || 0}</div><div class="stat-label">Completed</div></div>
+      <div class="stat-card" style="--accent:var(--rider-color)"><div class="stat-value">${stats.available_riders || 0}</div><div class="stat-label">Available Riders</div></div>
+      <div class="stat-card" style="--accent:var(--shelter-color)"><div class="stat-value">${stats.shelters || 0}</div><div class="stat-label">Active Shelters</div></div>
+      <div class="stat-card" style="--accent:var(--red)"><div class="stat-value">${stats.open_alerts || 0}</div><div class="stat-label">Open Alerts</div></div>
+      <div class="stat-card" style="--accent:var(--donor-color)"><div class="stat-value">${stats.donors || 0}</div><div class="stat-label">Donors</div></div>
+    `;
+    // Update alert badge
+    const alertBadge = document.getElementById('alert-badge');
+    if (stats.open_alerts > 0) { alertBadge.textContent = stats.open_alerts; alertBadge.classList.remove('hidden'); }
+    else alertBadge.classList.add('hidden');
+
+    // Mini alerts
+    const alerts = await api.get('/admin/alerts').catch(() => []);
+    const open = alerts.filter(a => !a.resolved_at).slice(0, 3);
+    const miniAlerts = document.getElementById('mini-alerts');
+    if (open.length === 0) { miniAlerts.innerHTML = '<p class="text-muted text-sm">No open alerts 🎉</p>'; }
+    else {
+      miniAlerts.innerHTML = open.map(a => `
+        <div class="alert-item unresolved">
+          <div style="flex:1;"><div class="alert-type">${a.type.replace(/_/g,' ')}</div>
+          <div class="alert-msg">${JSON.parse(a.payload)?.message || '—'}</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="resolveAlert('${a.id}')">✓</button>
+        </div>`).join('');
+    }
+  }
+
+  // ── Matching ───────────────────────────────────────────────────────
+  async function triggerMatch() {
+    try {
+      const result = await api.post('/admin/match');
+      const el = document.getElementById('match-result');
+      const body = document.getElementById('match-result-body');
+      el.classList.remove('hidden');
+      if (result.matched === 0) {
+        body.innerHTML = '<p class="text-muted">No pending donations to match, or no feasible matches found.</p>';
+      } else {
+        body.innerHTML = `<p class="text-green font-bold mb-3">✅ ${result.matched} donation(s) matched!</p>` +
+          result.results.map(r => `<div class="text-sm text-secondary mb-1">• Donation <code>${r.donationId.slice(0,8)}</code> → ${r.batches.length} batch(es) created</div>`).join('');
+      }
+      toast('success', `Matching complete`, `${result.matched} donations matched`);
+      loadOverview();
+    } catch(ex) { toast('error', 'Matching failed', ex.message); }
+  }
+
+  async function loadMatchSuggestions() {
+    const container = document.getElementById('match-suggestions');
+    container.innerHTML = '<p class="text-muted text-sm">Loading suggestions…</p>';
+    // Get pending donations first
+    const donations = await api.get('/donations').catch(() => []);
+    const pending = donations.filter(d => d.status === 'PENDING');
+    if (!pending.length) { container.innerHTML = '<p class="text-muted text-sm">No pending donations.</p>'; return; }
+    // Show suggestions for first pending donation
+    const d = pending[0];
+    const suggestions = await api.get(`/admin/match/suggestions/${d.id}`).catch(() => []);
+    container.innerHTML = `
+      <div class="section-title">Suggestions for donation <code>${d.id.slice(0,8)}</code> (${aidTypeBadge(d.aid_type)} ${d.quantity}${d.unit})</div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Shelter</th><th>Need</th><th>Distance</th><th>ETA</th><th>Expiry Buffer</th><th>Feasible</th></tr></thead>
+          <tbody>${suggestions.map(s => `
+            <tr>
+              <td>${s.shelter_name}</td>
+              <td>${s.required}</td>
+              <td>${s.dist_km} km</td>
+              <td>${s.eta_minutes} min</td>
+              <td class="${s.expiry_buffer_minutes < 0 ? 'text-red' : 'text-green'}">${s.expiry_buffer_minutes} min</td>
+              <td>${s.feasible ? '<span class="badge badge-green">Yes</span>' : '<span class="badge badge-red">No</span>'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ── Deliveries ─────────────────────────────────────────────────────
+  async function loadDeliveries() {
+    const deliveries = await api.get('/deliveries').catch(() => []);
+    const container = document.getElementById('deliveries-list');
+    if (!deliveries.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🚚</div><h3>No deliveries yet</h3></div>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>ID</th><th>Aid</th><th>Rider</th><th>Shelter</th><th>Status</th><th>Qty</th><th>Actions</th></tr></thead>
+          <tbody>${deliveries.map(d => `
+            <tr>
+              <td class="text-xs text-muted">${d.id.slice(0,8)}…</td>
+              <td>${aidTypeBadge(d.aid_type)}</td>
+              <td>${d.rider_name || '—'}</td>
+              <td>${d.shelter_name || '—'}</td>
+              <td>${statusBadge(d.status)}</td>
+              <td>${d.quantity || '—'}</td>
+              <td>
+                ${['PICKED_UP','IN_TRANSIT','REROUTED'].includes(d.status) ? `<button class="btn btn-warning btn-sm" onclick="openRerouteModal('${d.id}')">🔄 Reroute</button>` : ''}
+                <button class="btn btn-ghost btn-sm" onclick="viewCompensation('${d.id}')">💰 Pay</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function openRerouteModal(deliveryId) {
+    const overlay = openModal(`
+      <div class="modal-header">
+        <div class="modal-title">🔄 Reroute Delivery</div>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-secondary text-sm mb-4">Leave shelter ID blank to auto-select the nearest feasible shelter.</p>
+        <div class="form-group">
+          <label class="form-label">New Shelter ID (optional)</label>
+          <input class="form-input" type="text" id="reroute-shelter" placeholder="Leave blank for auto" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn btn-warning" onclick="submitReroute('${deliveryId}', this.closest('.modal-overlay'))">Reroute</button>
+      </div>
+    `);
+  }
+
+  async function submitReroute(deliveryId, overlay) {
+    const newShelterId = document.getElementById('reroute-shelter')?.value || undefined;
+    try {
+      const result = await api.put(`/deliveries/${deliveryId}/reroute`, { new_shelter_id: newShelterId || undefined });
+      closeModal(overlay);
+      toast('success', 'Delivery rerouted!', `New destination: ${result.newShelter?.name || newShelterId}`);
+      loadDeliveries();
+    } catch(ex) { toast('error', 'Reroute failed', ex.message); }
+  }
+
+  async function viewCompensation(deliveryId) {
+    const comp = await api.get(`/payments/compensation/${deliveryId}`).catch(() => []);
+    const payment = await api.get(`/payments/delivery/${deliveryId}`).catch(() => null);
+    const overlay = openModal(`
+      <div class="modal-header">
+        <div class="modal-title">💰 Compensation — Delivery ${deliveryId.slice(0,8)}</div>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        ${payment ? `<div class="card mb-4"><div class="text-sm"><strong>Payment:</strong> ₹${payment.amount} + ₹${payment.tip_amount} tip via ${payment.method} — ${statusBadge(payment.status)}</div></div>` : '<p class="text-muted text-sm mb-4">No payment recorded yet.</p>'}
+        ${comp.length === 0 ? '<p class="text-muted text-sm">No compensation records yet — payment must be completed first.</p>' : `
+          <div class="section-title" style="font-size:0.875rem;">Rider Split</div>
+          <div class="comp-split mb-3">
+            ${comp.map((c,i) => `<div class="comp-segment ${i===0?'a':'b'}" style="width:${c.pct_share*100}%">${Math.round(c.pct_share*100)}%</div>`).join('')}
+          </div>
+          ${comp.map(c => `<div class="flex items-center justify-between text-sm mb-2"><span>${c.rider_name}</span> <strong>₹${c.total?.toFixed(2)}</strong></div>`).join('')}
+        `}
+      </div>
+    `);
+  }
+
+  // ── Riders ─────────────────────────────────────────────────────────
+  async function loadRiders() {
+    const riders = await api.get('/riders').catch(() => []);
+    document.getElementById('riders-list').innerHTML = `
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Name</th><th>Status</th><th>Vehicle</th><th>Capacity</th><th>Location</th></tr></thead>
+          <tbody>${riders.length ? riders.map(r => `
+            <tr>
+              <td>${r.name}</td>
+              <td>${statusBadge(r.status)}</td>
+              <td>${r.vehicle_type || '—'}</td>
+              <td>${r.capacity_kg} kg</td>
+              <td class="text-xs text-muted">(${r.lat?.toFixed(4)}, ${r.lng?.toFixed(4)})</td>
+            </tr>`).join('') : '<tr><td colspan="5" class="text-muted" style="text-align:center;">No riders registered.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ── Shelters ───────────────────────────────────────────────────────
+  async function loadShelters() {
+    const shelters = await api.get('/shelters').catch(() => []);
+    document.getElementById('shelters-list').innerHTML = `
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Name</th><th>Capacity</th><th>Food</th><th>Medical</th><th>Kits</th><th>Status</th></tr></thead>
+          <tbody>${shelters.length ? shelters.map(s => `
+            <tr>
+              <td>${s.name}</td>
+              <td>${s.capacity || 0} people</td>
+              <td>${s.food_required}</td>
+              <td>${s.medical_required}</td>
+              <td>${s.kit_required}</td>
+              <td><span class="badge ${s.is_active ? 'badge-green' : 'badge-red'}">${s.is_active ? 'Active' : 'Closed'}</span></td>
+            </tr>`).join('') : '<tr><td colspan="6" class="text-muted" style="text-align:center;">No shelters registered.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ── Alerts ─────────────────────────────────────────────────────────
+  async function loadAlerts() {
+    const alerts = await api.get('/admin/alerts').catch(() => []);
+    const container = document.getElementById('alerts-list');
+    if (!alerts.length) { container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎉</div><h3>No alerts</h3></div>`; return; }
+    container.innerHTML = alerts.map(a => {
+      let payload = {};
+      try { payload = JSON.parse(a.payload); } catch {}
+      return `
+        <div class="alert-item ${a.resolved_at ? 'resolved' : 'unresolved'}">
+          <div style="flex:1;">
+            <div class="alert-type">${a.type.replace(/_/g,' ')} &nbsp;·&nbsp; <span class="text-muted">${fmtTimeAgo(a.created_at)}</span></div>
+            <div class="alert-msg">${payload.message || JSON.stringify(payload)}</div>
+          </div>
+          ${!a.resolved_at ? `<button class="btn btn-ghost btn-sm" onclick="resolveAlert('${a.id}')">✓ Resolve</button>` : '<span class="text-muted text-xs">Resolved</span>'}
+        </div>`;
+    }).join('');
+  }
+
+  async function resolveAlert(id) {
+    try {
+      await api.put(`/admin/alerts/${id}/resolve`);
+      loadAlerts();
+      loadOverview();
+      toast('success', 'Alert resolved');
+    } catch(ex) { toast('error', 'Failed', ex.message); }
+  }
+
+  // ── Live Log ───────────────────────────────────────────────────────
+  function addLog(type, msg) {
+    const time = new Date().toLocaleTimeString();
+    const entry = { time, type, msg };
+    logEntries.unshift(entry);
+    if (logEntries.length > 200) logEntries.pop();
+
+    const cls = { warn:'warn', error:'error', success:'success', info:'info' }[type] || '';
+    const line = `<div class="log-entry ${cls}">[${time}] ${msg}</div>`;
+
+    const miniLog = document.getElementById('mini-log');
+    if (miniLog) miniLog.insertAdjacentHTML('afterbegin', line);
+
+    const mainLog = document.getElementById('main-log');
+    if (mainLog) mainLog.insertAdjacentHTML('afterbegin', line);
+  }
+
+  // ── Socket Events ──────────────────────────────────────────────────
+  function attachSocketEvents(sock) {
+    sock.on('alert:critical', (data) => {
+      addLog('error', `🚨 CRITICAL: ${data.type} — ${data.message}`);
+      toast('error', `🚨 ${data.type.replace(/_/g,' ')}`, data.message, 8000);
+      loadOverview();
+    });
+
+    sock.on('delivery:status_changed', ({ deliveryId, status }) => {
+      addLog('info', `🚚 Delivery ${deliveryId?.slice(0,8)} → ${status}`);
+      loadOverview();
+    });
+
+    sock.on('delivery:rerouted', ({ deliveryId, newShelterId }) => {
+      addLog('warn', `🔄 Delivery ${deliveryId?.slice(0,8)} rerouted to shelter ${newShelterId?.slice(0,8)}`);
+      toast('warning', 'Delivery rerouted', `To ${newShelterId}`);
+    });
+
+    sock.on('rider:status_changed', ({ riderId, status }) => {
+      addLog('info', `🏍️ Rider ${riderId?.slice(0,8)} → ${status}`);
+    });
+
+    sock.on('rider:location_updated', ({ riderId, lat, lng }) => {
+      addLog('info', `📍 Rider ${riderId?.slice(0,8)} at (${lat?.toFixed(4)}, ${lng?.toFixed(4)})`);
+    });
+
+    sock.on('reservation:expired', ({ reservationId }) => {
+      addLog('warn', `⏰ Reservation ${reservationId?.slice(0,8)} expired — batch released`);
+    });
+
+    sock.on('shelter:status_changed', ({ shelterId, is_active }) => {
+      addLog(is_active ? 'success' : 'warn', `🏠 Shelter ${shelterId?.slice(0,8)} ${is_active ? 'opened' : 'CLOSED'}`);
+      loadOverview();
+    });
+
+    sock.on('shelter:demand_updated', ({ shelterId }) => {
+      addLog('info', `📋 Shelter ${shelterId?.slice(0,8)} updated requirements`);
+    });
+
+    sock.on('donation:expiry_warning', ({ donationId, minutesLeft, aidType }) => {
+      addLog('warn', `⏰ ${aidType} donation ${donationId?.slice(0,8)} expires in ${minutesLeft} min`);
+      toast('warning', 'Expiry Warning', `${aidType} donation expires in ${minutesLeft}m`, 8000);
+    });
+
+    sock.on('payment:confirmed', ({ paymentId, status }) => {
+      addLog('success', `💳 Payment ${paymentId?.slice(0,8)} → ${status}`);
+    });
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────
+  (function init() {
+    const user = getUser(); const token = getToken();
+    if (user && token && user.role === 'ADMIN') bootApp(user);
+  })();
+</script>
+</body>
+</html>

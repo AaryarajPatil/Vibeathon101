@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AidSync — Civic Aid Coordination Platform</title>
+  <meta name="description" content="Real-time civic aid coordination and last-mile logistics connecting donors, riders, shelters, and coordinators." />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+
+<div style="min-height:100vh; display:flex; flex-direction:column; justify-content:center; background: radial-gradient(ellipse at 30% 40%, rgba(59,130,246,0.08) 0%, transparent 60%), radial-gradient(ellipse at 70% 70%, rgba(139,92,246,0.08) 0%, transparent 60%), var(--bg-base);">
+
+  <!-- Hero -->
+  <div class="landing-hero">
+    <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); border-radius:999px; padding:6px 16px; margin-bottom:20px;">
+      <span class="live-dot"></span>
+      <span style="font-size:0.8rem; color:var(--accent); font-weight:600;">Live Coordination Active</span>
+    </div>
+    <h1>AidSync</h1>
+    <p>Real-time civic aid coordination — connecting surplus to need, at the last mile.</p>
+  </div>
+
+  <!-- Role Cards -->
+  <div class="role-cards">
+    <a href="/donor" class="role-card donor" id="role-donor">
+      <span class="role-card-icon">🤲</span>
+      <div class="role-card-title">Donor</div>
+      <div class="role-card-desc">Donate perishables, medical supplies & kits to shelters in need</div>
+    </a>
+    <a href="/rider" class="role-card rider" id="role-rider">
+      <span class="role-card-icon">🏍️</span>
+      <div class="role-card-title">Rider</div>
+      <div class="role-card-desc">Pick up and deliver aid batches across the city</div>
+    </a>
+    <a href="/shelter" class="role-card shelter" id="role-shelter">
+      <span class="role-card-icon">🏠</span>
+      <div class="role-card-title">Shelter</div>
+      <div class="role-card-desc">Manage your requirements and track incoming deliveries</div>
+    </a>
+    <a href="/admin" class="role-card admin" id="role-admin">
+      <span class="role-card-icon">🎛️</span>
+      <div class="role-card-title">Coordinator</div>
+      <div class="role-card-desc">Monitor operations, trigger matching, and handle incidents</div>
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <p style="text-align:center; color:var(--text-muted); font-size:0.8rem; padding:40px 20px 20px;">
+    AidSync — Hackathon Prototype &nbsp;|&nbsp; The Last-Mile Spoilage Trap Problem
+  </p>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  redirectIfLoggedIn();
+</script>
+</body>
+</html>
